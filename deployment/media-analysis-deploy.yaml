@@ -1,0 +1,496 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: (SO0042) Media Analysis Solution - The Media Analysis Solution is a serverless solution that leverages managed AWS services to automatically analyze your audio, video, and image files in order to extract valuable metadata.
+
+Parameters:
+    Email:
+        Type: String
+        Description: Your email address
+        AllowedPattern: '[^\s@]+@[^\s@]+\.[^\s@]+'
+    Size:
+        Type: String
+        Description: Amazon Elasticsearch cluster sizing
+        Default: Small
+        AllowedValues:
+            - Small
+            - Medium
+            - Large
+    SendAnonymousData:
+        Type: String
+        Description: Anonymous Metrics Request
+        Default: "Yes"
+        AllowedValues:
+            - "Yes"
+            - "No"
+
+Metadata:
+    AWS::CloudFormation::Interface:
+        ParameterGroups:
+            -
+                Label:
+                    default: "Solution Configuration"
+                Parameters:
+                    - Email
+                    - Size
+            -
+                Label:
+                    default: "Anonymous Metrics Request"
+                Parameters:
+                    - SendAnonymousData
+        ParameterLabels:
+            Email:
+                default: "Email address"
+            Size:
+                default: "Amazon Elasticsearch cluster sizing"
+            SendAnonymousData:
+                default: "Send Anonymous Usage Data"
+
+Mappings:
+    SourceCode:
+        General:
+            S3Bucket: "%%BUCKET_NAME%%"
+            KeyPrefix: "media-analysis-solution/%%VERSION%%"
+
+Resources:
+    MediaAnalysisBucket:
+        Type: AWS::S3::Bucket
+        DeletionPolicy: Retain
+        DependsOn: MediaAnalysisNewMediaPermission
+        Properties:
+            BucketName: !Join ["", ["media-analysis-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                    -
+                      ServerSideEncryptionByDefault:
+                          SSEAlgorithm: AES256
+            CorsConfiguration:
+                CorsRules:
+                  -
+                    AllowedHeaders:
+                      - '*'
+                    AllowedMethods:
+                      - 'PUT'
+                      - 'GET'
+                      - 'POST'
+                    AllowedOrigins:
+                      - '*'
+                    ExposedHeaders:
+                      - 'ETAG'
+                    MaxAge: 3000
+            NotificationConfiguration:
+                LambdaConfigurations:
+                    - Event: "s3:ObjectCreated:*"
+                      Function: !GetAtt MediaAnalysisFunction.Arn
+                      Filter:
+                          S3Key:
+                              Rules:
+                                  - Name: prefix
+                                    Value: 'private/'
+
+    MediaAnalysisWebsiteBucket:
+        Type: AWS::S3::Bucket
+        DeletionPolicy: Retain
+        Properties:
+            WebsiteConfiguration:
+                IndexDocument: "index.html"
+                ErrorDocument: "index.html"
+
+    MediaAnalysisWebsiteBucketPolicy:
+        Type: "AWS::S3::BucketPolicy"
+        Properties:
+            Bucket:
+                Ref: "MediaAnalysisWebsiteBucket"
+            PolicyDocument:
+                Statement:
+                    -
+                        Action:
+                            - "s3:GetObject"
+                        Effect: "Allow"
+                        Resource:
+                            Fn::Join:
+                                - ""
+                                -
+                                    - "arn:aws:s3:::"
+                                    -
+                                        Ref: "MediaAnalysisWebsiteBucket"
+                                    - "/*"
+                        Principal: "*"
+
+    MediaAnalysisHelperRole:
+        Type: AWS::IAM::Role
+        Properties:
+            AssumeRolePolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                -
+                  Effect: "Allow"
+                  Principal:
+                    Service:
+                      - "lambda.amazonaws.com"
+                  Action:
+                    - "sts:AssumeRole"
+            Path: /
+            Policies:
+              -
+                PolicyName: media-analysis-helper-policy
+                PolicyDocument:
+                    Version: "2012-10-17"
+                    Statement:
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "es:ESHttpPut"
+                        Resource: !Join ["", ["arn:aws:es:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":domain/media-analysis/*"]]
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "logs:CreateLogGroup"
+                          - "logs:CreateLogStream"
+                          - "logs:PutLogEvents"
+                        Resource: "*"
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "s3:GetObject"
+                        Resource: "arn:aws:s3:::*"
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "s3:PutObject"
+                        Resource: !Join ["", ["arn:aws:s3:::", !Ref MediaAnalysisWebsiteBucket, "/*"]]
+
+    MediaAnalysisHelperFunction:
+        Type: AWS::Lambda::Function
+        Properties:
+            Description: "AWS Lambda function to help the Media Analysis Solution template"
+            Code:
+                S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
+                S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "media-analysis-helper.zip"]]
+            Handler: index.handler
+            Runtime: nodejs8.10
+            Role: !GetAtt MediaAnalysisHelperRole.Arn
+            Timeout: 300
+            MemorySize: 256
+
+    MediaAnalysisESHelper:
+        Type: Custom::CreateIndex
+        Properties:
+            ServiceToken: !GetAtt MediaAnalysisHelperFunction.Arn
+            customAction: "createIndex"
+            clusterUrl: !GetAtt MediaAnalysisStorageStack.Outputs.EsCluster
+            es_index: "media-analysis"
+
+    GenerateUuid:
+        Type: Custom::CreateUuid
+        Properties:
+            ServiceToken: !GetAtt MediaAnalysisHelperFunction.Arn
+            customAction: "createUuid"
+
+    SendConfiguration:
+        Type: Custom::SendConfig
+        Properties:
+            ServiceToken: !GetAtt MediaAnalysisHelperFunction.Arn
+            customAction: "sendConfig"
+            uuid: !GetAtt GenerateUuid.uuid
+            solutionId: SO0042
+            version: 1
+            size: !Ref Size
+            metrics: !Ref SendAnonymousData
+
+    CopyMediaAnalysisWebsite:
+        Type: "Custom::CopyWebsite"
+        Properties:
+            ServiceToken: !GetAtt MediaAnalysisHelperFunction.Arn
+            manifestKey: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "web-site-manifest.json"]]
+            sourceS3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+            sourceS3key: !FindInMap ["SourceCode", "General", "KeyPrefix"]
+            destS3Bucket: !Ref MediaAnalysisWebsiteBucket
+            customAction: "copyS3assets"
+
+    ConfigureMediaAnalysisWebsite:
+        Type: "Custom::ConfigureWebsite"
+        DependsOn: CopyMediaAnalysisWebsite
+        Properties:
+            ServiceToken: !GetAtt MediaAnalysisHelperFunction.Arn
+            REGION: !Ref "AWS::Region"
+            USERPOOLID: !Ref MediaAnalysisUserPool
+            USERPOOLWEBCLIENTID: !Ref MediaAnalysisUserPoolClient
+            IDENTITYPOOLID: !Ref MediaAnalysisIdentityPool
+            BUCKET: !Ref MediaAnalysisBucket
+            ENDPOINT: !Join ["", ["https://",!GetAtt MediaAnalysisApiStack.Outputs.ApiId, ".execute-api.", !Ref "AWS::Region", ".amazonaws.com/prod"]]
+            CONSOLE_LINK: !Join ["", ["https://console.aws.amazon.com/states/home?region=", !Ref "AWS::Region", "#/executions/details/arn:aws:states:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", "execution:media-analysis-state-machine"]]
+            destS3Bucket: !Ref MediaAnalysisWebsiteBucket
+            destS3Key: "assets/media_analysis_config.js"
+            customAction: "putConfig"
+
+    MediaAnalysisStorageStack:
+        Type: "AWS::CloudFormation::Stack"
+        Properties:
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]] , !FindInMap ["SourceCode", "General", "KeyPrefix"], "media-analysis-storage-stack.template"]]
+            Parameters:
+                Size: !Ref Size
+                DomainName: media-analysis
+
+    MediaAnalysisStateMachineStack:
+        Type: "AWS::CloudFormation::Stack"
+        Properties:
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]] , !FindInMap ["SourceCode", "General", "KeyPrefix"], "media-analysis-state-machine-stack.template"]]
+            Parameters:
+                MediaAnalysisFunction: !GetAtt MediaAnalysisFunction.Arn
+                StateMachineName: media-analysis-state-machine
+
+    MediaAnalysisApiStack:
+        Type: "AWS::CloudFormation::Stack"
+        Properties:
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]] , !FindInMap ["SourceCode", "General", "KeyPrefix"], "media-analysis-api-stack.template"]]
+            Parameters:
+                StateMachineArn: !Join ["", ["arn:aws:states:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":stateMachine:media-analysis-state-machine"]]
+                DomainEndpoint: !GetAtt MediaAnalysisStorageStack.Outputs.EsCluster
+                S3Bucket: !Join ["", ["media-analysis-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
+
+    MediaAnalysisFunction:
+        Type: AWS::Lambda::Function
+        Properties:
+            Description: "AWS Lambda function to execute analysis"
+            Code:
+                S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
+                S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "media-analysis-function.zip"]]
+            Handler: index.handler
+            Runtime: nodejs8.10
+            Role: !GetAtt MediaAnalysisFunctionRole.Arn
+            Timeout: 60
+            MemorySize: 256
+            Environment:
+                Variables:
+                    CONFIDENCE_SCORE: 0
+                    DOMAIN_ENDPOINT: !GetAtt MediaAnalysisStorageStack.Outputs.EsCluster
+                    ES_INDEX: media-analysis
+                    S3_BUCKET: !Join ["", ["media-analysis-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
+                    STATE_MACHINE: !Join ["", ["arn:aws:states:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":stateMachine:media-analysis-state-machine"]]
+                    UUID: !GetAtt GenerateUuid.uuid
+                    METRICS: !Ref SendAnonymousData
+                    SOLUTIONID: SO0042
+
+    MediaAnalysisFunctionRole:
+        Type: AWS::IAM::Role
+        Properties:
+            AssumeRolePolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                -
+                  Effect: "Allow"
+                  Principal:
+                    Service:
+                      - "lambda.amazonaws.com"
+                  Action:
+                    - "sts:AssumeRole"
+            Path: /
+            Policies:
+              -
+                PolicyName: media-analysis-function-policy
+                PolicyDocument:
+                    Version: "2012-10-17"
+                    Statement:
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "es:ESHttpPut"
+                          - "es:ESHttpPost"
+                        Resource:
+                          - !Join ["", ["arn:aws:es:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":domain/media-analysis/*"]]
+                          - !Join ["", ["arn:aws:es:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":domain/media-analysis"]]
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "rekognition:CreateCollection"
+                          - "rekognition:DetectFaces"
+                          - "rekognition:DetectLabels"
+                          - "rekognition:GetCelebrityRecognition"
+                          - "rekognition:GetFaceDetection"
+                          - "rekognition:GetFaceSearch"
+                          - "rekognition:GetLabelDetection"
+                          - "rekognition:GetPersonTracking"
+                          - "rekognition:IndexFaces"
+                          - "rekognition:RecognizeCelebrities"
+                          - "rekognition:SearchFacesByImage"
+                          - "rekognition:StartCelebrityRecognition"
+                          - "rekognition:StartFaceDetection"
+                          - "rekognition:StartFaceSearch"
+                          - "rekognition:StartLabelDetection"
+                          - "rekognition:StartPersonTracking"
+                        Resource: "*"
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "comprehend:BatchDetectEntities"
+                          - "comprehend:BatchDetectKeyPhrases"
+                        Resource: "*"
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "transcribe:GetTranscriptionJob"
+                          - "transcribe:StartTranscriptionJob"
+                        Resource: "*"
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "s3:GetObject"
+                          - "s3:PutObject"
+                        Resource:
+                          - !Join ["", ["arn:aws:s3:::", "media-analysis-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", "/*"]]
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "states:StartExecution"
+                        Resource: !Join ["", ["arn:aws:states:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":stateMachine:media-analysis-state-machine"]]
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "logs:CreateLogGroup"
+                          - "logs:CreateLogStream"
+                          - "logs:PutLogEvents"
+                        Resource: "*"
+
+    MediaAnalysisNewMediaPermission:
+        Type: AWS::Lambda::Permission
+        Properties:
+            Action: lambda:InvokeFunction
+            FunctionName: !GetAtt MediaAnalysisFunction.Arn
+            Principal: s3.amazonaws.com
+            SourceAccount: !Ref AWS::AccountId
+            SourceArn: !Join ["", ["arn:aws:s3:::", "media-analysis-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
+
+    MediaAnalysisCongitoAuthenticatedRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+          RoleName: !Join ["-", ["media-analysis-auth-role", !Ref "AWS::Region" ]]
+          AssumeRolePolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                  -
+                      Effect: "Allow"
+                      Principal:
+                          Federated: "cognito-identity.amazonaws.com"
+                      Action:
+                              - "sts:AssumeRoleWithWebIdentity"
+                      Condition:
+                          StringEquals:
+                              cognito-identity.amazonaws.com:aud: !Ref MediaAnalysisIdentityPool
+                          ForAnyValue:StringLike:
+                              cognito-identity.amazonaws.com:amr: "authenticated"
+          Path: "/"
+          Policies:
+            -
+              PolicyName: !Join ["-",["media-analysis-auth-policy",!Ref "AWS::Region"]]
+              PolicyDocument:
+                  Version: "2012-10-17"
+                  Statement:
+                      -
+                          Effect: "Allow"
+                          Action:
+                            - "cognito-identity:GetId"
+                          Resource:
+                            - !Join ["",["arn:aws:cognito-identity:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":identitypool/", !Ref MediaAnalysisIdentityPool]]
+                      -
+                          Effect: "Allow"
+                          Action:
+                            - "s3:PutObject"
+                            - "s3:GetObject"
+                          Resource:
+                            - !Join ["",["arn:aws:s3:::", !Ref MediaAnalysisBucket, "/private/${cognito-identity.amazonaws.com:sub}/*"]]
+                      -
+                          Effect: "Allow"
+                          Action:
+                            - "execute-api:Invoke"
+                          Resource:
+                            - !Join ["",["arn:aws:execute-api:", !Ref "AWS::Region", ":", !Ref "AWS::AccountId", ":", !GetAtt MediaAnalysisApiStack.Outputs.ApiId, "/prod/GET/*"]]
+
+    MediaAnalysisIdentityPoolRoleAttachment:
+        Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+        Properties:
+            IdentityPoolId: !Ref MediaAnalysisIdentityPool
+            Roles:
+                authenticated: !GetAtt MediaAnalysisCongitoAuthenticatedRole.Arn
+
+    MediaAnalysisIdentityPool:
+        Type: "AWS::Cognito::IdentityPool"
+        Properties:
+            IdentityPoolName: media_analysis_identity_pool
+            AllowUnauthenticatedIdentities: false
+            CognitoIdentityProviders:
+                -
+                  ClientId: !Ref MediaAnalysisUserPoolClient
+                  ProviderName: !GetAtt MediaAnalysisUserPool.ProviderName
+                  ServerSideTokenCheck: false
+
+    MediaAnalysisUserPoolClient:
+        Type: "AWS::Cognito::UserPoolClient"
+        Properties:
+            ClientName: "media_analysis_app"
+            RefreshTokenValidity: 30
+            UserPoolId: !Ref MediaAnalysisUserPool
+
+    MediaAnalysisUser:
+        Type: "AWS::Cognito::UserPoolUser"
+        DependsOn: [MediaAnalysisStorageStack, MediaAnalysisStateMachineStack, MediaAnalysisApiStack, MediaAnalysisWebsiteBucketPolicy]
+        Properties:
+            DesiredDeliveryMediums:
+                - EMAIL
+            ForceAliasCreation: false
+            UserAttributes:
+                -
+                  Name: email
+                  Value: !Ref Email
+            Username: !Join [".", !Split ["@", !Ref Email]]
+            UserPoolId: !Ref MediaAnalysisUserPool
+
+    MediaAnalysisUserPool:
+        Type: "AWS::Cognito::UserPool"
+        Properties:
+            AdminCreateUserConfig:
+                AllowAdminCreateUserOnly: true
+                InviteMessageTemplate:
+                  EmailSubject: "Your Media Analysis Solution demo login"
+                  EmailMessage:
+                    !Sub |
+                        <p>You are invited to join the Media Analysis Solution demo page. Youre credentials are:</p>
+                        <p>
+                        Username: <strong>{username}</strong><br />
+                        Password: <strong>{####}</strong>
+                        </p>
+                        <p>
+                        Please sign in with the user name and your temporary password provided above at: <br />
+                        http://${MediaAnalysisWebsiteBucket}.s3-website.${AWS::Region}.amazonaws.com/
+                        </p>
+            AliasAttributes:
+                - email
+            AutoVerifiedAttributes:
+                - email
+            MfaConfiguration: 'OFF'
+            Policies:
+                PasswordPolicy:
+                    MinimumLength: 8
+                    RequireLowercase: true
+                    RequireNumbers: true
+                    RequireSymbols: false
+                    RequireUppercase: true
+            UserPoolName: media_analysis_user_pool
+
+Outputs:
+    DemoWebsite:
+        Description: "Media Analysis Demo Website URL"
+        Value: !Sub http://${MediaAnalysisWebsiteBucket}.s3-website.${AWS::Region}.amazonaws.com/
+    MediaAnalysisApiEndpoint:
+        Description: "Media Analysis API Gateway Endpoint"
+        Value: !Join ["", ["https://",!GetAtt MediaAnalysisApiStack.Outputs.ApiId, ".execute-api.", !Ref "AWS::Region", ".amazonaws.com/prod"]]
+    SolutionUUID:
+        Description: "Solution UUID"
+        Value: !GetAtt GenerateUuid.uuid
+    MediaAnalysisUserPoolId:
+        Description: "Media Analysis User Pool ID"
+        Value: !Ref MediaAnalysisUserPool
+    MediaAnalysisDemoWebsiteClientId:
+        Description: "Media Analysis Demo Website Client ID"
+        Value: !Ref MediaAnalysisUserPoolClient
+    MediaAnalysisIdentityPool:
+        Description: "Media Analysis Identity Pool"
+        Value: !Ref MediaAnalysisIdentityPool

@@ -1,0 +1,33 @@
+{
+    "name": "media-analysis-api",
+    "description": "A microservice for handling requests from API Gateway",
+    "main": "index.js",
+    "author": {
+        "name": "aws-solutions-builder"
+    },
+    "version": "0.0.1",
+    "private": "true",
+    "dependencies": {
+        "elasticsearch": "*",
+        "http-aws-es": "*",
+        "aws-sdk": "*"
+    },
+    "devDependencies": {
+        "chai": "*",
+        "sinon": "*",
+        "sinon-chai": "*",
+        "mocha": "*",
+        "aws-sdk-mock": "*",
+        "npm-run-all": "*",
+        "proxyquire": "*"
+    },
+    "scripts": {
+        "pretest": "npm install",
+        "test": "env S3_BUCKET='S3Bucket' STATE_MACHINE='arn::state-machine' CONFIDENCE_SCORE=0 mocha lib/*.spec.js",
+        "build-init": "rm -rf dist && rm -f archive.zip && mkdir dist && mkdir dist/lib",
+        "build:copy": "cp index.js dist/ && cp -r lib/*.js dist/lib",
+        "build:install": "cp package.json dist/ && cd dist && npm install --production",
+        "build": "npm-run-all -s build-init build:copy build:install",
+        "zip": "cd dist && zip -rq media-analysis-api.zip ."
+    }
+}

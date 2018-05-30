@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: (SO0042-storage) Media Analysis Solution - The AWS CloudFormation template that provisions the Media Analysis Solution storage and search resources using Amazon Elasticsearch.
+
+Parameters:
+    Size:
+        Type: String
+        Description: Amazon Elasticsearch cluster sizing
+    DomainName:
+        Type: String
+        Description: Name of the Amazon Elasitcsearch cluster
+
+Mappings:
+    RegionMap:
+        us-east-1:
+            InstanceType: "m4.large.elasticsearch"
+        us-east-2:
+            InstanceType: "m4.large.elasticsearch"
+        us-west-2:
+            InstanceType: "m4.large.elasticsearch"
+        eu-west-1:
+            InstanceType: "m4.large.elasticsearch"
+
+    SizeMap:
+        Small:
+            InstanceCount: 2
+            VolumeSize: 20
+        Medium:
+            InstanceCount: 2
+            VolumeSize: 40
+        Large:
+            InstanceCount: 2
+            VolumeSize: 60
+
+
+Resources:
+    MediaAnalysisElasticSearch:
+        Type: AWS::Elasticsearch::Domain
+        Properties:
+            DomainName: !Ref DomainName
+            ElasticsearchClusterConfig:
+                DedicatedMasterEnabled: true
+                InstanceCount: !FindInMap ["SizeMap", !Ref Size, "InstanceCount"]
+                ZoneAwarenessEnabled: false
+                InstanceType: !FindInMap ["RegionMap", Ref: "AWS::Region", "InstanceType"]
+            ElasticsearchVersion: 6.0
+            EBSOptions:
+                EBSEnabled: true
+                Iops: 0
+                VolumeSize: !FindInMap ["SizeMap", !Ref Size, "VolumeSize"]
+                VolumeType: "gp2"
+            AdvancedOptions:
+                rest.action.multi.allow_explicit_index: "true"
+
+Outputs:
+    EsCluster:
+        Description: "Elasticsearch cluster domain endpoint"
+        Value: !GetAtt MediaAnalysisElasticSearch.DomainEndpoint

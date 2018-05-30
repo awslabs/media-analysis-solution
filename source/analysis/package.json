@@ -1,0 +1,36 @@
+{
+    "name": "media-analysis-function",
+    "description": "Lambda function to handle analysis processes.",
+    "main": "index.js",
+    "author": {
+        "name": "aws-solutions-builder"
+    },
+    "version": "0.0.1",
+    "private": "true",
+    "dependencies": {
+        "aws-sdk": "*",
+        "request": "*",
+        "elasticsearch": "*",
+        "http-aws-es": "*",
+        "url": "*",
+        "https": "*"
+    },
+    "devDependencies": {
+        "chai": "*",
+        "sinon": "*",
+        "sinon-chai": "*",
+        "mocha": "*",
+        "aws-sdk-mock": "*",
+        "npm-run-all": "*",
+        "proxyquire": "*"
+    },
+    "scripts": {
+        "pretest": "npm install",
+        "test": "env S3_BUCKET='s3-bucket' STATE_MACHINE='arn::state-machine' CONFIDENCE_SCORE=0 mocha lib/collection/*.spec.js lib/comprehend/*.spec.js lib/image/*.spec.js lib/steps/*.spec.js lib/transcribe/*.spec.js lib/upload/*.spec.js lib/video/*.spec.js",
+        "build-init": "rm -rf dist && rm -f archive.zip && mkdir dist && mkdir dist/lib",
+        "build:copy": "cp index.js dist/ && cp -r lib dist",
+        "build:install": "cp package.json dist/ && cd dist && npm install --production",
+        "build": "npm-run-all -s build-init build:copy build:install",
+        "zip": "cd dist && zip -rq media-analysis-function.zip ."
+    }
+}
