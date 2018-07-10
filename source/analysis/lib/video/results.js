@@ -197,7 +197,7 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
                           label_response = {'duration': data.VideoMetadata.DurationMillis, 'labels': label_array, 'status': 'IN PROGRESS', 'loop_count':loop_count += 1, 'next_token':data.NextToken};
                       }
                       else {
-                          label_response = {'duration': data.VideoMetadata.DurationMillis, 'labels': label_array, 'status': 'COMPLETE', 'key': ['private',owner_id,'media',object_id,'results','labels.json'].join('/')};
+                          label_response = {'duration': data.VideoMetadata.DurationMillis, 'labels': label_array.splice(0,500), 'status': 'COMPLETE', 'key': ['private',owner_id,'media',object_id,'results','labels.json'].join('/')};
                       }
                       console.log(label_response);
                       return cb(null,label_response);

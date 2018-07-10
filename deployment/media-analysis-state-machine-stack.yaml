@@ -178,37 +178,47 @@ Resources:
                                 "function_name": "start_transcription"
                               },
                               "ResultPath": "$.lambda",
-                              "Next": "Submit Audio"
+                              "Next": "Start Transcription"
                             },
-                            "Submit Audio": {
+                            "Start Transcription": {
                               "Type": "Task",
                               "Resource": "${lambdaArn}",
                               "InputPath": "$",
-                              "ResultPath": "$.transcribe.job_name",
-                              "Next": "Audio Wait"
+                              "ResultPath": "$.transcribe",
+                              "Next": "Did Transcription Start"
                             },
-                            "Audio Wait": {
+                            "Did Transcription Start": {
+                              "Type": "Choice",
+                              "Choices": [{
+                                  "Variable": "$.transcribe.jobDidStart",
+                                  "BooleanEquals": true,
+                                  "Next": "Transcription Wait"
+                                }
+                              ],
+                              "Default": "Job Failed"
+                            },
+                            "Transcription Wait": {
                               "Type": "Wait",
                               "Seconds": 30,
-                              "Next": "Audio-Status Params"
+                              "Next": "Get Transcription Status Params"
                             },
-                            "Audio-Status Params": {
+                            "Get Transcription Status Params": {
                               "Type": "Pass",
                               "Result": {
                                 "service_name": "transcribe",
                                 "function_name": "get_status"
                               },
                               "ResultPath": "$.lambda",
-                              "Next": "Get Job Status"
+                              "Next": "Get Transcription Status"
                             },
-                            "Get Job Status": {
+                            "Get Transcription Status": {
                               "Type": "Task",
                               "Resource": "${lambdaArn}",
-                              "Next": "Job Complete",
+                              "Next": "Did Transcription Complete",
                               "InputPath": "$",
                               "ResultPath": "$.transcribe.status"
                             },
-                            "Job Complete": {
+                            "Did Transcription Complete": {
                               "Type": "Choice",
                               "Choices": [{
                                   "Variable": "$.transcribe.status",
@@ -217,16 +227,16 @@ Resources:
                                 },
                                 {
                                   "Variable": "$.transcribe.status",
-                                  "StringEquals": "COMPLETED",
+                                  "StringEquals": "MP4 FAILED",
                                   "Next": "Audio-Results Params"
                                 },
                                 {
                                   "Variable": "$.transcribe.status",
-                                  "StringEquals": "MP4 FAILED",
+                                  "StringEquals": "COMPLETED",
                                   "Next": "Audio-Results Params"
                                 }
                               ],
-                              "Default": "Audio Wait"
+                              "Default": "Transcription Wait"
                             },
                             "Audio-Results Params": {
                               "Type": "Pass",

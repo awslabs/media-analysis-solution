@@ -53,7 +53,8 @@ describe('Transcribe', function() {
             _transcribe.startTranscription(event_info, function(err, data) {
                 if (err) done(err);
                 else {
-                    assert.equal(data, [event_info.object_id,'transcription'].join('_'));
+                    expect(data.jobName).to.equal([event_info.object_id,'transcription'].join('_'));
+                    expect(data.jobDidStart).to.equal(true);
                     done();
                 }
             });
@@ -68,7 +69,7 @@ describe('Transcribe', function() {
             let _transcribe = new Transcribe();
             _transcribe.startTranscription(event_info, function(err, data) {
                 if (err) {
-                    expect(err).to.equal('error');
+                    expect(err.jobDidStart).to.equal(false);
                     done();
                 } else {
                     done('invalid failure for negative test');
@@ -88,8 +89,8 @@ describe('Transcribe', function() {
         it('should return status of the transcription job if getTranscriptionJob is successful', function(done) {
 
             event_info['transcribe'] = {
-              job_name: [event_info.object_id,'transcription'].join('_'),
-              status: "IN_PROGRESS"
+              jobDidStart: true,
+              jobName: [event_info.object_id,'transcription'].join('_')
             };
 
             AWS.mock('TranscribeService', 'getTranscriptionJob', function(params, callback) {
@@ -108,32 +109,33 @@ describe('Transcribe', function() {
 
         it('should return error if getTranscriptionJob fails', function(done) {
 
-            event_info['transcribe'] = {
-              job_name: [event_info.object_id,'transcription'].join('_'),
-              status: "IN_PROGRESS"
-            };
+          event_info['transcribe'] = {
+            jobDidStart: true,
+            jobName: [event_info.object_id,'transcription'].join('_')
+          };
 
-            AWS.mock('TranscribeService', 'getTranscriptionJob', function(params, callback) {
-                callback('error', null);
-            });
+          AWS.mock('TranscribeService', 'getTranscriptionJob', function(params, callback) {
+              callback('error', null);
+          });
 
-            let _transcribe = new Transcribe();
-            _transcribe.getStatus(event_info, function(err, data) {
-                if (err) {
-                    expect(err).to.equal('error');
-                    done();
-                } else {
-                    done('invalid failure for negative test');
-                }
-            });
+          let _transcribe = new Transcribe();
+          _transcribe.getStatus(event_info, function(err, data) {
+              if (err) {
+                  expect(err).to.equal('error');
+                  done();
+              } else {
+                  done('invalid failure for negative test');
+              }
+          });
         });
 
         it('should return MP4 FAILED if transcription fails but it is an mp4 file', function(done) {
 
             event_info['transcribe'] = {
-              job_name: [event_info.object_id,'transcription'].join('_'),
-              status: "IN_PROGRESS"
+              jobDidStart: true,
+              jobName: [event_info.object_id,'transcription'].join('_')
             };
+
             event_info.key = "private/us-east-1:56af0fcb-0b48-412c-8546-0d1e89431a74/media/33451416-a313-4d30-ae23-82da4cb3c89d/content/video.mp4";
             event_info.file_type = "mp4";
             get_status_response.TranscriptionJob.TranscriptionJobStatus = "FAILED";
@@ -165,8 +167,9 @@ describe('Transcribe', function() {
         it('should return location of transcript if getTranscriptionJob and upload are successful', function(done) {
 
             event_info['transcribe'] = {
-              job_name: [event_info.object_id,'transcription'].join('_'),
-              status: "COMPLETED"
+              jobDidStart: true,
+              jobName: [event_info.object_id,'transcription'].join('_'),
+              status: 'COMPLETED'
             };
 
             get_status_response['Transcript'] = {
@@ -194,9 +197,11 @@ describe('Transcribe', function() {
         it('should return location of transcript if transcription failed and the file_type is mp4 and getTranscriptionJob and upload are successful', function(done) {
 
             event_info['transcribe'] = {
-              job_name: [event_info.object_id,'transcription'].join('_'),
-              status: "MP4 FAILED"
+              jobDidStart: true,
+              jobName: [event_info.object_id,'transcription'].join('_'),
+              status: 'MP4 FAILED'
             };
+
             event_info.key = "private/us-east-1:56af0fcb-0b48-412c-8546-0d1e89431a74/media/33451416-a313-4d30-ae23-82da4cb3c89d/content/video.mp4";
             event_info.file_type = "mp4";
             get_status_response.TranscriptionJob.TranscriptionJobStatus = "FAILED";
@@ -222,8 +227,9 @@ describe('Transcribe', function() {
         it('should return an error if upload fails', function(done) {
 
             event_info['transcribe'] = {
-              job_name: [event_info.object_id,'transcription'].join('_'),
-              status: "COMPLETED"
+              jobDidStart: true,
+              jobName: [event_info.object_id,'transcription'].join('_'),
+              status: 'COMPLETED'
             };
 
             get_status_response['Transcript'] = {
@@ -252,8 +258,9 @@ describe('Transcribe', function() {
         it('should return an error if getTranscriptionJob fails', function(done) {
 
             event_info['transcribe'] = {
-              job_name: [event_info.object_id,'transcription'].join('_'),
-              status: "COMPLETED"
+              jobDidStart: true,
+              jobName: [event_info.object_id,'transcription'].join('_'),
+              status: 'COMPLETED'
             };
 
             AWS.mock('TranscribeService', 'getTranscriptionJob', function(params, callback) {

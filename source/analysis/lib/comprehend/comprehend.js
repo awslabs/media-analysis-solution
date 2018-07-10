@@ -146,7 +146,7 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
                                   return cb(err, null);
                                 }
                                 else {
-                                  let entity_response = {'key': entity_key, 'entities': entity_array, 'status': 'COMPLETE'};
+                                  let entity_response = {'key': entity_key, 'entities': entity_array.splice(0,250), 'status': 'COMPLETE'};
                                   return cb(null,entity_response);
                                 }
                             });
@@ -266,7 +266,7 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
                                    return cb(err, null);
                                  }
                                  else {
-                                   let phrase_response = {'key': phrase_key, 'phrases': phrase_array, 'status': 'COMPLETE'};
+                                   let phrase_response = {'key': phrase_key, 'phrases': phrase_array.splice(0,250), 'status': 'COMPLETE'};
                                    return cb(null,phrase_response);
                                  }
                              });

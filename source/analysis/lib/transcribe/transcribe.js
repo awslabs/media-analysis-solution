@@ -41,89 +41,104 @@ const s3Bucket = process.env.S3_BUCKET;
 
     /**
      * Starts audio transcription job
-     * @param {JSON} audio_info - information about the audio file
+     * @param {JSON} event_info - information about the audio file
      * @param {startTranscription~callback} cb - The callback that handles the response.
      */
 
-     transcribe.prototype.startTranscription = function(audio_info, cb) {
+     transcribe.prototype.startTranscription = function(event_info, cb) {
         console.log('Executing audio transcription');
 
-        let job_name = [audio_info.object_id,'transcription'].join('_');
+        let job_name = [event_info.object_id,'transcription'].join('_');
 
         let media_file_uri = '';
         if (process.env.AWS_REGION == 'us-east-1'){
-            media_file_uri = ['https://s3.amazonaws.com',s3Bucket,audio_info.key].join('/');
+            media_file_uri = ['https://s3.amazonaws.com',s3Bucket,event_info.key].join('/');
         }
         else {
-            media_file_uri = ['https://s3-',process.env.AWS_REGION,'.amazonaws.com/',s3Bucket,'/',audio_info.key].join('');
+            media_file_uri = ['https://s3-',process.env.AWS_REGION,'.amazonaws.com/',s3Bucket,'/',event_info.key].join('');
         }
 
-        console.log(media_file_uri);
         let params = {
             LanguageCode: 'en-US',
             Media: {
                 MediaFileUri: media_file_uri
             },
-            MediaFormat: audio_info.file_type,
+            MediaFormat: event_info.file_type,
             TranscriptionJobName: job_name
          };
 
          let transcribe = new AWS.TranscribeService();
          transcribe.startTranscriptionJob(params, function(err, data) {
-             if (err) {
-               return cb(err, null);
+
+           // 07.02.2018 - Prevents infinite loop when transcribe job doesn't start
+           // If the transcription job returns an error, pass it on to the state machine.
+           if (err) {
+             let resp = {
+               jobDidStart: false,
+               err: err
+             };
+
+             return cb(resp, null);
+           }
+
+           // 07.02.2018 - Prevents infinite loop when transcribe job doesn't start
+           // Otherwise, return information about the job to the state machine.
+           else {
+             let resp = {
+               jobDidStart: true,
+               jobName: data.TranscriptionJob.TranscriptionJobName
              }
-             else {
-               return cb(null, job_name);
-             }
+
+             return cb(null, resp);
+           }
          });
      };
 
      /**
       * Gets status of audio transcription job
-      * @param {JSON} audio_info - information about the transcription job
+      * @param {JSON} event_info - information about the transcription job
       * @param {getStatus~callback} cb - The callback that handles the response.
       */
 
-      transcribe.prototype.getStatus = function(audio_info, cb) {
+      transcribe.prototype.getStatus = function(event_info, cb) {
          console.log('Getting transcription job status');
 
-
          let params = {
-             TranscriptionJobName: audio_info.transcribe.job_name
+             TranscriptionJobName: event_info.transcribe.jobName
           };
 
           let transcribe = new AWS.TranscribeService();
           transcribe.getTranscriptionJob(params, function(err, data) {
+
               if (err) {
                 return cb(err, null);
               }
               else {
-                /**
-                *  State machine will handle mp4 transcription failures
-                *  differently than other formats
-                */
-                if (data.TranscriptionJob.TranscriptionJobStatus == 'FAILED' && audio_info.file_type == 'mp4') {
-                    return cb(null, 'MP4 FAILED');
+
+                // 07.02.2018 - Prevents infinite loop when transcribe job doesn't start
+                // Assigns transcription job status to variable to simplify function return statement.
+                let jobStatus = data.TranscriptionJob.TranscriptionJobStatus;
+
+                if (jobStatus == 'FAILED' && event_info.file_type == 'mp4') {
+                    jobStatus = 'MP4 FAILED';
                 }
-                else {
-                    return cb(null, data.TranscriptionJob.TranscriptionJobStatus);
-                }
+
+                return cb(null, jobStatus);
               }
           });
       };
 
       /**
        * Gets results of audio transcription job
-       * @param {JSON} audio_info - information about the transcription job
+       * @param {JSON} event_info - information about the transcription job
        * @param {getResults~callback} cb - The callback that handles the response.
        */
 
-       transcribe.prototype.getResults = function(audio_info, cb) {
+       transcribe.prototype.getResults = function(event_info, cb) {
           console.log('Getting results of transcription job');
 
           let params = {
-              TranscriptionJobName: audio_info.transcribe.job_name
+              TranscriptionJobName: event_info.transcribe.jobName
            };
 
            let transcribe = new AWS.TranscribeService();
@@ -132,9 +147,9 @@ const s3Bucket = process.env.S3_BUCKET;
                  return cb(err, null);
                }
                else {
-                 if (data.TranscriptionJob.TranscriptionJobStatus == 'FAILED' && audio_info.file_type == 'mp4') {
+                 if (data.TranscriptionJob.TranscriptionJobStatus == 'FAILED' && event_info.file_type == 'mp4') {
                       let mp4_failed_transcript = {
-                       jobName: audio_info.transcribe.job_name,
+                       jobName: event_info.transcribe.jobName,
                        results: {
                          transcripts: [{
                            transcript: ['Transcription Failed: ', data.TranscriptionJob.FailureReason].join(' ')
@@ -144,7 +159,7 @@ const s3Bucket = process.env.S3_BUCKET;
                        status: 'MP4 FAILED'
                      };
                      let transcript_json = mp4_failed_transcript;
-                     let transcript_key = ['private',audio_info.owner_id,'media',audio_info.object_id,'results','transcript.json'].join('/');
+                     let transcript_key = ['private',event_info.owner_id,'media',event_info.object_id,'results','transcript.json'].join('/');
                      let s3_params = {
                          Bucket: s3Bucket,
                          Key: transcript_key,
@@ -169,7 +184,7 @@ const s3Bucket = process.env.S3_BUCKET;
                          }
                          else {
                             let transcript_json = JSON.parse(body);
-                            let transcript_key = ['private',audio_info.owner_id,'media',audio_info.object_id,'results','transcript.json'].join('/');
+                            let transcript_key = ['private',event_info.owner_id,'media',event_info.object_id,'results','transcript.json'].join('/');
                             let s3_params = {
                                 Bucket: s3Bucket,
                                 Key: transcript_key,

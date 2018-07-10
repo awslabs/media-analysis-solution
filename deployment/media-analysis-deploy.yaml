@@ -14,13 +14,6 @@ Parameters:
             - Small
             - Medium
             - Large
-    SendAnonymousData:
-        Type: String
-        Description: Anonymous Metrics Request
-        Default: "Yes"
-        AllowedValues:
-            - "Yes"
-            - "No"
 
 Metadata:
     AWS::CloudFormation::Interface:
@@ -31,20 +24,16 @@ Metadata:
                 Parameters:
                     - Email
                     - Size
-            -
-                Label:
-                    default: "Anonymous Metrics Request"
-                Parameters:
-                    - SendAnonymousData
         ParameterLabels:
             Email:
                 default: "Email address"
             Size:
                 default: "Amazon Elasticsearch cluster sizing"
-            SendAnonymousData:
-                default: "Send Anonymous Usage Data"
 
 Mappings:
+    Send:
+        AnonymousUsage:
+            Data: "Yes"
     SourceCode:
         General:
             S3Bucket: "%%BUCKET_NAME%%"
@@ -194,7 +183,7 @@ Resources:
             solutionId: SO0042
             version: 1
             size: !Ref Size
-            metrics: !Ref SendAnonymousData
+            metrics: !FindInMap ["Send", "AnonymousUsage", "Data"]
 
     CopyMediaAnalysisWebsite:
         Type: "Custom::CopyWebsite"
@@ -267,7 +256,7 @@ Resources:
                     S3_BUCKET: !Join ["", ["media-analysis-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
                     STATE_MACHINE: !Join ["", ["arn:aws:states:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":stateMachine:media-analysis-state-machine"]]
                     UUID: !GetAtt GenerateUuid.uuid
-                    METRICS: !Ref SendAnonymousData
+                    METRICS: !FindInMap ["Send", "AnonymousUsage", "Data"]
                     SOLUTIONID: SO0042
 
     MediaAnalysisFunctionRole:

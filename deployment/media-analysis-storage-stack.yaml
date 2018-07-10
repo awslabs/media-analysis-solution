@@ -23,14 +23,16 @@ Mappings:
     SizeMap:
         Small:
             InstanceCount: 2
-            VolumeSize: 20
+            VolumeSize: 25
+            MasterSize: "t2.small.elasticsearch"
         Medium:
-            InstanceCount: 2
-            VolumeSize: 40
+            InstanceCount: 4
+            VolumeSize: 25
+            MasterSize: "t2.medium.elasticsearch"
         Large:
-            InstanceCount: 2
-            VolumeSize: 60
-
+            InstanceCount: 8
+            VolumeSize: 25
+            MasterSize: "t2.medium.elasticsearch"
 
 Resources:
     MediaAnalysisElasticSearch:
@@ -39,8 +41,10 @@ Resources:
             DomainName: !Ref DomainName
             ElasticsearchClusterConfig:
                 DedicatedMasterEnabled: true
+                DedicatedMasterCount: 3
+                DedicatedMasterType: !FindInMap ["SizeMap", !Ref Size, "MasterSize"]
                 InstanceCount: !FindInMap ["SizeMap", !Ref Size, "InstanceCount"]
-                ZoneAwarenessEnabled: false
+                ZoneAwarenessEnabled: true
                 InstanceType: !FindInMap ["RegionMap", Ref: "AWS::Region", "InstanceType"]
             ElasticsearchVersion: 6.0
             EBSOptions:
