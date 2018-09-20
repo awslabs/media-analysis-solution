@@ -41,12 +41,12 @@ Resources:
             MemorySize: 256
             Environment:
                 Variables:
-                    CONFIDENCE_SCORE: 0
+                    CONFIDENCE_SCORE: '0'
                     DOMAIN_ENDPOINT: !Ref DomainEndpoint
                     ES_INDEX: media-analysis
                     S3_BUCKET: !Ref S3Bucket
                     STATE_MACHINE: !Ref StateMachineArn
-                    SEARCH_RESULT_LIMIT: 30
+                    SEARCH_RESULT_LIMIT: '30'
 
     MediaAnalysisApiRole:
         Type: AWS::IAM::Role

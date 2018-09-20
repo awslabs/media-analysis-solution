@@ -17,102 +17,106 @@ if [ -z "$1" ] || [ -z "$2" ]; then
     exit 1
 fi
 
+# Get reference for all important folders
+template_dir="$PWD"
+dist_dir="$template_dir/dist"
+source_dir="$template_dir/../source"
+
 echo "------------------------------------------------------------------------------"
 echo "Rebuild distribution"
 echo "------------------------------------------------------------------------------"
 # Setting up directories
-echo "rm -rf ./dist"
-rm -rf ./dist
+echo "rm -rf $dist_dir"
+rm -rf "$dist_dir"
 # Create new dist directory
-echo "mkdir -p ./dist"
-mkdir -p ./dist
-
+echo "mkdir -p $dist_dir"
+mkdir -p "$dist_dir"
 
 echo "------------------------------------------------------------------------------"
 echo "CloudFormation Templates"
 echo "------------------------------------------------------------------------------"
 # Copy deploy template to dist directory and update bucket name
-echo "cp media-analysis-deploy.yaml ./dist/media-analysis-deploy.template"
-cp ./media-analysis-deploy.yaml ./dist/media-analysis-deploy.template
-echo "Updating code source bucket in template with $1"
+echo "cp $template_dir/media-analysis-deploy.yaml $dist_dir/media-analysis-deploy.template"
+cp "$template_dir/media-analysis-deploy.yaml" "$dist_dir/media-analysis-deploy.template"
+
+echo "Updating code source bucket in template with `$1`"
 replace="s/%%BUCKET_NAME%%/$1/g"
-echo "sed -i '' -e $replace dist/media-analysis-deploy.template"
-sed -i '' -e $replace dist/media-analysis-deploy.template
+echo "sed -i '' -e $replace $dist_dir/media-analysis-deploy.template"
+sed -i '' -e $replace "$dist_dir/media-analysis-deploy.template"
+
+echo "Replacing solution version in template with `$2`"
 replace="s/%%VERSION%%/$2/g"
-echo "sed -i '' -e $replace dist/media-analysis-deploy.template"
-sed -i '' -e $replace dist/media-analysis-deploy.template
+echo "sed -i '' -e $replace $dist_dir/media-analysis-deploy.template"
+sed -i '' -e $replace "$dist_dir/media-analysis-deploy.template"
 
 # Copy api template to dist directory and update bucket name
-echo "cp media-analysis-api-stack.yaml ./dist/media-analysis-api-stack.template"
-cp ./media-analysis-api-stack.yaml ./dist/media-analysis-api-stack.template
-echo "Updating code source bucket in template with $1"
+echo "cp $template_dir/media-analysis-api-stack.yaml $dist_dir/media-analysis-api-stack.template"
+cp "$template_dir/media-analysis-api-stack.yaml" "$dist_dir/media-analysis-api-stack.template"
+
+echo "Updating code source bucket in template with `$1`"
 replace="s/%%BUCKET_NAME%%/$1/g"
-echo "sed -i '' -e $replace dist/media-analysis-api-stack.template"
-sed -i '' -e $replace dist/media-analysis-api-stack.template
+echo "sed -i '' -e $replace $dist_dir/media-analysis-api-stack.template"
+sed -i '' -e $replace "$dist_dir/media-analysis-api-stack.template"
+
+echo "Replacing solution version in template with `$2`"
 replace="s/%%VERSION%%/$2/g"
-echo "sed -i '' -e $replace dist/media-analysis-api-stack.template"
-sed -i '' -e $replace dist/media-analysis-api-stack.template
+echo "sed -i '' -e $replace $dist_dir/media-analysis-api-stack.template"
+sed -i '' -e $replace "$dist_dir/media-analysis-api-stack.template"
 
 # Copy storage template to dist directory and update bucket name
-echo "cp media-analysis-storage-stack.yaml ./dist/media-analysis-storage-stack.template"
-cp ./media-analysis-storage-stack.yaml ./dist/media-analysis-storage-stack.template
-echo "Updating code source bucket in template with $1"
-replace="s/%%BUCKET_NAME%%/$1/g"
-echo "sed -i '' -e $replace dist/media-analysis-storage-stack.template"
-sed -i '' -e $replace dist/media-analysis-storage-stack.template
+echo "cp $template_dir/media-analysis-storage-stack.yaml $dist_dir/media-analysis-storage-stack.template"
+cp "$template_dir/media-analysis-storage-stack.yaml" "$dist_dir/media-analysis-storage-stack.template"
 
 # Copy state machine template to dist directory
-echo "cp media-analysis-state-machine-stack.yaml ./dist/media-analysis-state-machine-stack.template"
-cp ./media-analysis-state-machine-stack.yaml ./dist/media-analysis-state-machine-stack.template
+echo "cp $template_dir/media-analysis-state-machine-stack.yaml $dist_dir/media-analysis-state-machine-stack.template"
+cp "$template_dir/media-analysis-state-machine-stack.yaml" "$dist_dir/media-analysis-state-machine-stack.template"
 
 echo "------------------------------------------------------------------------------"
 echo "Analysis Function"
 echo "------------------------------------------------------------------------------"
 echo "Building Analysis Lambda function"
-cd ../source/analysis
+cd "$source_dir/analysis" || exit
 npm install
 npm run build
 npm run zip
-cp dist/media-analysis-function.zip ../../deployment/dist/media-analysis-function.zip
+cp "./dist/media-analysis-function.zip" "$dist_dir/media-analysis-function.zip"
 
 echo "------------------------------------------------------------------------------"
 echo "API Function"
 echo "------------------------------------------------------------------------------"
 echo "Building API Lambda function"
-cd ../api
+cd "$source_dir/api" || exit
 npm install
 npm run build
 npm run zip
-cp dist/media-analysis-api.zip ../../deployment/dist/media-analysis-api.zip
-
+cp "./dist/media-analysis-api.zip" "$dist_dir/media-analysis-api.zip"
 
 echo "------------------------------------------------------------------------------"
 echo "Helper Function"
 echo "------------------------------------------------------------------------------"
 echo "Building Helper Lambda function"
-cd ../helper
+cd "$source_dir/helper" || exit
 npm install
 npm run build
 npm run zip
-cp dist/media-analysis-helper.zip ../../deployment/dist/media-analysis-helper.zip
-
+cp "./dist/media-analysis-helper.zip" "$dist_dir/media-analysis-helper.zip"
 
 echo "------------------------------------------------------------------------------"
 echo "Website"
 echo "------------------------------------------------------------------------------"
 echo "Building Demo Website"
-cd ../web_site
+cd "$source_dir/web_site" || exit
 npm install
 npm run build
-cp -r ./build ../../deployment/dist/web_site
+cp -r "./build" "$dist_dir/web_site"
 
 echo "------------------------------------------------------------------------------"
 echo "Website Manifest"
 echo "------------------------------------------------------------------------------"
 echo "Generating web site manifest"
-cd ../../deployment/manifest-generator
+cd "$template_dir/manifest-generator" || exit
 npm install
-node app.js
+node app.js --target "$dist_dir/web_site" --output "$dist_dir/site-manifest.json"
 
 echo "------------------------------------------------------------------------------"
 echo "S3 Packaging Complete"

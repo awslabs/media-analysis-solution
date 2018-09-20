@@ -26,7 +26,7 @@
     },
     "scripts": {
         "pretest": "npm install",
-        "test": "env S3_BUCKET='s3-bucket' STATE_MACHINE='arn::state-machine' CONFIDENCE_SCORE=0 mocha lib/collection/*.spec.js lib/comprehend/*.spec.js lib/image/*.spec.js lib/steps/*.spec.js lib/transcribe/*.spec.js lib/upload/*.spec.js lib/video/*.spec.js",
+        "test": "env S3_BUCKET='s3-bucket' STATE_MACHINE='arn::state-machine' CONFIDENCE_SCORE=0 AWS_REGION='us-east-1' MEDIACONVERT_ROLE='MediaConvertRole' mocha lib/**/*.spec.js",
         "build-init": "rm -rf dist && rm -f archive.zip && mkdir dist && mkdir dist/lib",
         "build:copy": "cp index.js dist/ && cp -r lib dist",
         "build:install": "cp package.json dist/ && cd dist && npm install --production",

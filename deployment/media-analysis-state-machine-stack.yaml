@@ -142,7 +142,13 @@ Resources:
                           "States": {
                             "Is Audio": {
                               "Type": "Choice",
-                              "Choices": [{
+                              "Choices": [
+                                {
+                                  "Variable": "$.file_type",
+                                  "StringEquals": "mp4",
+                                  "Next": "Convert to Audio"
+                                },
+                                {
                                 "Or": [{
                                     "Variable": "$.file_type",
                                     "StringEquals": "mp3"
@@ -158,10 +164,6 @@ Resources:
                                   {
                                     "Variable": "$.file_type",
                                     "StringEquals": "flac"
-                                  },
-                                  {
-                                    "Variable": "$.file_type",
-                                    "StringEquals": "mp4"
                                   }
                                 ],
                                 "Next": "Audio-Submit Params"
@@ -170,6 +172,68 @@ Resources:
                             },
                             "Not Audio": {
                               "Type": "Succeed"
+                            },
+                            "Convert to Audio": {
+                              "Type": "Pass",
+                              "Result": {
+                                "service_name": "media_convert",
+                                "function_name": "start_media_convert"
+                              },
+                              "ResultPath": "$.lambda",
+                              "Next": "Start MediaConvert"
+                            },
+                            "Start MediaConvert": {
+                              "Type": "Task",
+                              "Resource": "${lambdaArn}",
+                              "InputPath": "$",
+                              "ResultPath": "$.mediaConvert",
+                              "Next": "Did MediaConvert Start"
+                            },
+                            "Did MediaConvert Start": {
+                              "Type": "Choice",
+                              "Choices": [{
+                                "Variable": "$.mediaConvert.jobDidStart",
+                                "BooleanEquals": true,
+                                "Next": "MediaConvert Wait"
+                              }],
+                              "Default": "Job Failed"
+                            },
+                            "MediaConvert Wait": {
+                              "Type": "Wait",
+                              "Seconds": 30,
+                              "Next": "Get MediaConvert Status Params"
+                            },
+                            "Get MediaConvert Status Params": {
+                              "Type": "Pass",
+                              "Result": {
+                                "service_name": "media_convert",
+                                "function_name": "get_status"
+                              },
+                              "ResultPath": "$.lambda",
+                              "Next": "Get MediaConvert Status"
+                            },
+                            "Get MediaConvert Status": {
+                              "Type": "Task",
+                              "Resource": "${lambdaArn}",
+                              "InputPath": "$",
+                              "ResultPath": "$",
+                              "Next": "Did MediaConvert Complete"
+                            },
+                            "Did MediaConvert Complete": {
+                              "Type": "Choice",
+                              "Choices": [
+                                {
+                                  "Variable": "$.mediaConvert.status",
+                                  "StringEquals": "FAILED",
+                                  "Next": "Job Failed"
+                                },
+                                {
+                                  "Variable": "$.mediaConvert.status",
+                                  "StringEquals": "COMPLETE",
+                                  "Next": "Audio-Submit Params"
+                                }
+                              ],
+                              "Default": "MediaConvert Wait"
                             },
                             "Audio-Submit Params": {
                               "Type": "Pass",

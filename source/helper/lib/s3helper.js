@@ -107,7 +107,7 @@ let s3helper = (function() {
 
         var params = {
             Bucket: s3Bucket,
-            Key: [s3Key,'web-site-manifest.json'].join('/')
+            Key: [s3Key,'site-manifest.json'].join('/')
         };
 
         console.log(`Attempting to download manifest`);

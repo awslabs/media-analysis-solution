@@ -85,24 +85,22 @@ Resources:
 
     MediaAnalysisWebsiteBucketPolicy:
         Type: "AWS::S3::BucketPolicy"
+        Metadata:
+          cfn_nag:
+            rules_to_suppress:
+              - id: F16
+                reason: "Public website bucket policy requires a wildcard principal"
         Properties:
             Bucket:
                 Ref: "MediaAnalysisWebsiteBucket"
             PolicyDocument:
                 Statement:
-                    -
-                        Action:
-                            - "s3:GetObject"
-                        Effect: "Allow"
-                        Resource:
-                            Fn::Join:
-                                - ""
-                                -
-                                    - "arn:aws:s3:::"
-                                    -
-                                        Ref: "MediaAnalysisWebsiteBucket"
-                                    - "/*"
-                        Principal: "*"
+                  - Effect: "Allow"
+                    Action:
+                      - "s3:GetObject"
+                    Resource:
+                      - !Sub '${MediaAnalysisWebsiteBucket.Arn}/*'
+                    Principal: '*'
 
     MediaAnalysisHelperRole:
         Type: AWS::IAM::Role
@@ -189,7 +187,7 @@ Resources:
         Type: "Custom::CopyWebsite"
         Properties:
             ServiceToken: !GetAtt MediaAnalysisHelperFunction.Arn
-            manifestKey: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "web-site-manifest.json"]]
+            manifestKey: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "site-manifest.json"]]
             sourceS3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
             sourceS3key: !FindInMap ["SourceCode", "General", "KeyPrefix"]
             destS3Bucket: !Ref MediaAnalysisWebsiteBucket
@@ -236,6 +234,37 @@ Resources:
                 DomainEndpoint: !GetAtt MediaAnalysisStorageStack.Outputs.EsCluster
                 S3Bucket: !Join ["", ["media-analysis-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
 
+    MediaConvertRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Principal:
+                Service:
+                  - "mediaconvert.amazonaws.com"
+              Action:
+                - "sts:AssumeRole"
+        Path: /
+        Policies:
+          - PolicyName: media-analysis-mediaconvert-policy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+
+                # Read input object
+                - Effect: "Allow"
+                  Action:
+                    - s3:GetObject
+                  Resource: !Sub 'arn:aws:s3:::media-analysis-${AWS::Region}-${AWS::AccountId}/*'
+
+                # Write output object
+                - Effect: "Allow"
+                  Action:
+                    - s3:PutObject
+                  Resource: !Sub 'arn:aws:s3:::media-analysis-${AWS::Region}-${AWS::AccountId}/*'
+
     MediaAnalysisFunction:
         Type: AWS::Lambda::Function
         Properties:
@@ -250,7 +279,7 @@ Resources:
             MemorySize: 256
             Environment:
                 Variables:
-                    CONFIDENCE_SCORE: 0
+                    CONFIDENCE_SCORE: '0'
                     DOMAIN_ENDPOINT: !GetAtt MediaAnalysisStorageStack.Outputs.EsCluster
                     ES_INDEX: media-analysis
                     S3_BUCKET: !Join ["", ["media-analysis-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
@@ -258,9 +287,15 @@ Resources:
                     UUID: !GetAtt GenerateUuid.uuid
                     METRICS: !FindInMap ["Send", "AnonymousUsage", "Data"]
                     SOLUTIONID: SO0042
+                    MEDIACONVERT_ROLE: !GetAtt MediaConvertRole.Arn
 
     MediaAnalysisFunctionRole:
         Type: AWS::IAM::Role
+        Metadata:
+          cfn_nag:
+            rules_to_suppress:
+              - id: W11
+                reason: "Refer to inline comments for the wildcard justification."
         Properties:
             AssumeRolePolicyDocument:
               Version: "2012-10-17"
@@ -285,6 +320,10 @@ Resources:
                           - "es:ESHttpPut"
                           - "es:ESHttpPost"
                         Resource:
+                          # Wildcards on ElasticSearch domain resources are
+                          # present because documents are indexed based off of
+                          # the Step Function job ID, which is unique per
+                          # invocation.
                           - !Join ["", ["arn:aws:es:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":domain/media-analysis/*"]]
                           - !Join ["", ["arn:aws:es:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":domain/media-analysis"]]
                       -
@@ -306,18 +345,28 @@ Resources:
                           - "rekognition:StartFaceSearch"
                           - "rekognition:StartLabelDetection"
                           - "rekognition:StartPersonTracking"
+                        # Wildcards in the Rekognition resource ARNs are present
+                        # due to Rekognition needing access to collections that
+                        # have IDs based off of a UUID generator.
+                        # https://docs.aws.amazon.com/rekognition/latest/dg/api-permissions-reference.html
                         Resource: "*"
                       -
                         Effect: "Allow"
                         Action:
                           - "comprehend:BatchDetectEntities"
                           - "comprehend:BatchDetectKeyPhrases"
+                        # These actions require resource wildcards per the
+                        # Comprehend documentation.
+                        # https://docs.aws.amazon.com/comprehend/latest/dg/comprehend-api-permissions-ref.html
                         Resource: "*"
                       -
                         Effect: "Allow"
                         Action:
                           - "transcribe:GetTranscriptionJob"
                           - "transcribe:StartTranscriptionJob"
+                        # These actions require resource wildcards per the
+                        # Transcribe documentation.
+                        # https://docs.aws.amazon.com/transcribe/latest/dg/asc-api-permissions-ref.html
                         Resource: "*"
                       -
                         Effect: "Allow"
@@ -325,6 +374,11 @@ Resources:
                           - "s3:GetObject"
                           - "s3:PutObject"
                         Resource:
+                          # The bucket name is constructed rather than referenced
+                          # due to a circular dependency between the S3 Bucket
+                          # and the Lambda events. The wildcard is present because
+                          # the step function will need access to objects in the
+                          # bucket that have a path based off of UUIDs.
                           - !Join ["", ["arn:aws:s3:::", "media-analysis-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", "/*"]]
                       -
                         Effect: "Allow"
@@ -334,9 +388,28 @@ Resources:
                       -
                         Effect: "Allow"
                         Action:
+                          - "mediaConvert:DescribeEndpoints"
+                          - "mediaConvert:CreateJob"
+                          - "mediaConvert:GetJob"
+                        # This wildcard is present because the MediaConvert job
+                        # IDs are randomly generated.
+                        Resource: "*"
+                      -
+                        Effect: "Allow"
+                        Action:
+                          - "iam:GetRole"
+                          - "iam:PassRole"
+                        Resource: !GetAtt MediaConvertRole.Arn
+
+                      -
+                        Effect: "Allow"
+                        Action:
                           - "logs:CreateLogGroup"
                           - "logs:CreateLogStream"
                           - "logs:PutLogEvents"
+                        # This wildcard is present because we're letting the
+                        # Lambda function name the CloudWatch log group.
+                        # https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/iam-identity-based-access-control-cwl.html
                         Resource: "*"
 
     MediaAnalysisNewMediaPermission:

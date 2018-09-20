@@ -19,6 +19,7 @@
 
 let AWS = require('aws-sdk');
 let transcribe = require('./transcribe');
+let mediaConvert = require('./media-convert');
 let comprehend = require('./comprehend');
 let image = require('./image');
 let video = require('./video');
@@ -123,6 +124,16 @@ module.exports.respond = function(event, cb) {
        }
        else if (event.lambda.service_name == 'transcribe'){
            transcribe.respond(event, function(err, data) {
+               if (err) {
+                   return cb(err, null);
+               }
+               else {
+                   return cb(null, data);
+               }
+           });
+       }
+       else if (event.lambda.service_name == 'media_convert'){
+           mediaConvert.respond(event, function(err, data) {
                if (err) {
                    return cb(err, null);
                }
