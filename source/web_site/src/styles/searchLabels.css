@@ -1,0 +1,35 @@
+#search-value {
+	width: 104%;
+	margin-left: -2% !important;
+	border-color: #333 !important;
+	font-size: 20px !important;
+}
+
+.form-control-feedback, .form-control{
+	color: #333;
+}
+
+.result {
+	padding: 20px;
+}
+
+video, img {
+	max-width: 100%;
+	max-height: 45vh;
+}
+
+.row {
+	border-bottom: 1px solid #333;
+}
+
+.result-name {
+	color: #333;
+    font-weight: 700;
+}
+
+.block-text {
+	word-wrap: break-word;
+    display: block;
+    padding: 0 10px;
+    margin-top: 5px;
+}

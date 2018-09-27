@@ -1,0 +1,17 @@
+#loader-container {
+	position: absolute;
+    margin-top: 50px;
+    z-index: 2;
+}
+
+.loader {
+	width: 35px;
+	height: 35px;
+	border-width: 2px;
+	border-style: solid;
+	border-color: #333 #333 transparent;
+	border-image: initial; border-radius: 100%;
+	-webkit-animation: spin .75s linear infinite; /* Safari */
+	animation: spin 0.75s linear infinite both;
+	display: inline-block;
+}
