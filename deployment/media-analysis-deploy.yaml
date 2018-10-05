@@ -514,7 +514,7 @@ Resources:
                   EmailSubject: "Your Media Analysis Solution demo login"
                   EmailMessage:
                     !Sub |
-                        <p>You are invited to join the Media Analysis Solution demo page. Youre credentials are:</p>
+                        <p>You are invited to join the Media Analysis Solution demo page. Your credentials are:</p>
                         <p>
                         Username: <strong>{username}</strong><br />
                         Password: <strong>{####}</strong>
