@@ -8,6 +8,10 @@ yarn-error.log*
 # Mac Stuff
 .DS_Store
 
+dist
+build
+package-lock.json
+
 # Runtime data
 pids
 *.pid

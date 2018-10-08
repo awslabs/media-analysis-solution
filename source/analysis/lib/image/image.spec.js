@@ -167,7 +167,6 @@ describe('Image', function() {
 
     let empty_face_match_response = {FaceMatches:[]};
 
-<<<<<<< HEAD
     describe('#getImageModeration', function() {
         beforeEach(function() {});
 
@@ -341,8 +340,6 @@ describe('Image', function() {
         });
     });
 
-=======
->>>>>>> b4df98592953f71cf9bde5021978e5df82cc87e6
     describe('#getLabels', function() {
 
         beforeEach(function() {});
