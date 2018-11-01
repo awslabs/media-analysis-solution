@@ -1,4 +1,4 @@
-z# Media Analysis Solution
+# Media Analysis Solution
 The increasing maturity and growing availability of machine learning (ML) algorithms and artificial intelligence (AI) services have unlocked new frontiers in analytics across several forms of media. Through the use of AI tools and services, it is possible to detect objects, recognize faces, transcribe and analyze audio, and much more. Advancements in deep learning algorithms and AI tooling have enabled developers and analysts to efficiently extract valuable data from multimedia sources, but can still require a great deal of time and effort to train ML models as well as maintain supporting infrastructure.
 
 AWS offers several managed AI services, such as Amazon Rekognition, Amazon Transcribe, and Amazon Comprehend, that offer immediate insights into image, video, and audio files. By combining these services with Amazon's managed storage and compute services, customers can quickly and easily build intelligent applications that inform and enable many use cases across a variety of fields, including public safety and security, media and entertainment, advertising and social media, etc.
