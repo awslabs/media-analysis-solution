@@ -280,4 +280,12 @@ describe('Transcribe', function() {
 
     });
 
+    describe('#generateJobName', () => {
+        it ('should return a unique ID for each invocation', () => {
+            let _transcribe = new Transcribe();
+            let jobName = _transcribe.generateJobName({ object_id: 'foo' });
+            assert.notEqual(jobName, _transcribe.generateJobName({ object_id: 'foo' }));
+        });
+    });
+
 });

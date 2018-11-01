@@ -201,7 +201,8 @@ class StatusModal extends Component {
             </div>
           );
       }
-      else if (this.props.format === "mp4") {
+      //BUGFIX/media-analysis-35 mov and mp4 resoults are the same removing if (mp4) {}
+      else if (this.props.format === "mp4" || this.props.format === "mov" ) {
           return(
             <div>
               <ModalHeader toggle={this.toggle}>Media Analysis Progress</ModalHeader>
@@ -225,36 +226,6 @@ class StatusModal extends Component {
                 <Progress animated color={this.state.entities_color} value={this.state.entities_value} />
                 <div>Key Phrases</div>
                 <Progress animated color={this.state.phrases_color} value={this.state.phrases_value} />
-              </ModalBody>
-              <ModalFooter>
-                <a href={console_link}>View progress in your AWS Console</a>
-                <div>
-                  <Link to={result_link}>
-                    <Button color="primary" disabled={this.state.button}>View Results</Button>
-                  </Link>
-                </div>
-              </ModalFooter>
-            </div>
-          );
-      }
-      else if (this.props.format === "mov") {
-          return(
-            <div>
-              <ModalHeader toggle={this.toggle}>Media Analysis Progress</ModalHeader>
-              <ModalBody>
-                <div>State Machine Progress</div>
-                <Progress animated color={this.state.state_machine_color} value={this.state.state_machine_value} />
-                <hr className="my-2" />
-                <div>Labels</div>
-                <Progress animated color={this.state.labels_color} value={this.state.labels_value} />
-                <div>Face Detection</div>
-                <Progress animated color={this.state.faces_color} value={this.state.faces_value} />
-                <div>Face Matching</div>
-                <Progress animated color={this.state.face_matches_color} value={this.state.face_matches_value} />
-                <div>Person Tracking</div>
-                <Progress animated color={this.state.persons_color} value={this.state.persons_value} />
-                <div>Celebrities</div>
-                <Progress animated color={this.state.celebs_color} value={this.state.celebs_value} />
               </ModalBody>
               <ModalFooter>
                 <a href={console_link}>View progress in your AWS Console</a>

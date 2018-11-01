@@ -16,7 +16,7 @@
  */
 
 'use strict';
-
+let crypto = require('crypto');
 let AWS = require('aws-sdk');
 let upload = require('./../upload');
 let request = require('request');
@@ -48,23 +48,25 @@ const s3Bucket = process.env.S3_BUCKET;
      transcribe.prototype.startTranscription = function(event_info, cb) {
         console.log('Executing audio transcription');
 
-        let job_name = [event_info.object_id,'transcription'].join('_');
+        let key = event_info.key;
+        let filetype = event_info.key.split('.')[1];
 
         let media_file_uri = '';
         if (process.env.AWS_REGION == 'us-east-1'){
-            media_file_uri = ['https://s3.amazonaws.com',s3Bucket,event_info.key].join('/');
+            media_file_uri = ['https://s3.amazonaws.com',s3Bucket,key].join('/');
         }
         else {
-            media_file_uri = ['https://s3-',process.env.AWS_REGION,'.amazonaws.com/',s3Bucket,'/',event_info.key].join('');
+            media_file_uri = ['https://s3-',process.env.AWS_REGION,'.amazonaws.com/',s3Bucket,'/',key].join('');
         }
+        console.log('File:: ',media_file_uri,' type:: ',filetype);
 
         let params = {
             LanguageCode: 'en-US',
             Media: {
                 MediaFileUri: media_file_uri
             },
-            MediaFormat: event_info.file_type,
-            TranscriptionJobName: job_name
+            MediaFormat: filetype,
+            TranscriptionJobName: this.generateJobName(event_info)
          };
 
          let transcribe = new AWS.TranscribeService();
@@ -207,6 +209,10 @@ const s3Bucket = process.env.S3_BUCKET;
                }
            });
        };
+
+       transcribe.prototype.generateJobName = function(event_info) {
+         return `${event_info.object_id}_${crypto.randomBytes(8).toString('hex')}_transcription`
+       }
 
     return transcribe;
 

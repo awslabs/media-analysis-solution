@@ -144,9 +144,18 @@ Resources:
                               "Type": "Choice",
                               "Choices": [
                                 {
+                                  "Or":[
+                                    {
                                   "Variable": "$.file_type",
-                                  "StringEquals": "mp4",
-                                  "Next": "Convert to Audio"
+                                  "StringEquals": "mp4"
+                                    },
+                                    {
+                                  "Variable": "$.file_type",
+                                  "StringEquals": "mov"
+                                    }
+
+                                  ],
+                                   "Next": "Convert to Audio"
                                 },
                                 {
                                 "Or": [{

@@ -88,14 +88,8 @@ class Result extends Component {
             self.getFaces();
             self.getFaceMatches();
         }
-        else if ( response.details.file_type === 'mov') {
-            self.getCelebs();
-            self.getLabels();
-            self.getFaces();
-            self.getFaceMatches();
-            self.getPersons();
-        }
-        else if ( response.details.file_type === 'mp4') {
+        //BUGFIX/media-analysis-35 mp4 and mov results are the same, removing if (mov) {}
+        else if ( response.details.file_type === 'mp4' || response.details.file_type === 'mov' ) {
             self.getCelebs();
             self.getLabels();
             self.getFaces();

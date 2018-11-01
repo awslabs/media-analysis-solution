@@ -191,126 +191,7 @@ class VideoResults extends Component {
 
     var file_type = this.props.filetype;
 
-    if (file_type === 'mov') {
-      //var self = this;
-      var file_name = this.props.filename;
-      var media_source = this.props.mediafile;
-      var labels = this.props.labels;
-      //var faces = this.props.faces;
-      //var face_matches = this.props.facematches;
-      //var celebs = this.props.celebs;
-
-      var atts = this.props.attributes.map(att => {
-          return(<Button color="primary" className="ml-1 mr-1 mb-1 mt-1" onClick={() => {this.setState({tracking:att.Name, boxes: att.Impressions});}}>{att.Name}</Button>)
-      });
-
-      var celebs = this.props.individualcelebs.map(celeb => {
-          return(<Button color="primary" className="ml-1 mr-1 mb-1 mt-1" onClick={() => {this.setState({tracking:celeb.Name, boxes: celeb.Impressions});}}>{celeb.Name}</Button>)
-      });
-
-      var face_matches = this.props.individualknownfaces.map(face => {
-          return(<Button color="primary" className="ml-1 mr-1 mb-1 mt-1" onClick={() => {this.setState({tracking:face.Name, boxes: face.Impressions});}}>{face.Name}</Button>)
-      });
-
-
-
-      return (
-        <Container>
-          <Row>
-            <Col>
-              <div>
-                <h1 align="center">{file_name}</h1>
-              </div>
-            </Col>
-          </Row>
-          <Row>
-            <Col md="8">
-              <div id="resultview" align="center" className='mb-3' style={{"overflow":"scroll", "maxWidth":"750px", "maxHeight": "400px"}}>
-                <video id="resultvid" src={media_source} className="img-fluid"/>
-              </div>
-            </Col>
-            <Col md="4">
-              <div>
-                <h5>Currently tracking:</h5>
-                <h6 align="center">{this.state.tracking}</h6>
-                <hr className="mt-2 mb-6" />
-              </div>
-              <div>
-                <h5>Controls:</h5>
-                <hr className="my-2" />
-              </div>
-              <div align="center">
-                <Button className="mr-2 my-2" color="info" onClick={() => {this.videoControl('play'); }}>Play</Button>
-                <Button className="mr-2 my-2" color="info" onClick={() => {this.videoControl('pause'); }}>Pause</Button>
-                <Button className="mr-2 my-2" color="info" onClick={() => {this.videoControl('restart'); }}>Restart</Button>
-              </div>
-              <div>
-                <h5>Click to track:</h5>
-                <hr className="my-2" />
-              </div>
-              <div align="center">
-                <Button color="primary" className="mr-2 mt-2" onClick={() => { this.setState({tracking:"Persons", boxes: this.props.persons}); }}>Persons</Button>
-                <Button color="primary" className="mr-2 mt-2" onClick={() => { this.setState({tracking:"Faces", boxes: this.props.allfaces}); }}>Faces</Button>
-                <Button color="primary" className="mr-2 mt-2" onClick={() => { this.setState({tracking:"Celebrities", boxes: this.props.celebvideo}); }}>Celebrities</Button>
-                <Button color="primary" className="mr-2 mt-2" onClick={() => { this.setState({tracking:"Known Faces", boxes: this.props.allknownfaces}); }}>Known Faces</Button>
-              </div>
-            </Col>
-          </Row>
-          <Row>
-            <Col>
-              <div>
-                <Nav tabs className="mb-3">
-                  <NavItem>
-                    <NavLink active={this.state.activeTab === "labels"} onClick={() => { this.tabToggle('labels'); }}>Labels</NavLink>
-                  </NavItem>
-                  <NavItem>
-                    <NavLink active={this.state.activeTab === "faces"} onClick={() => { this.tabToggle('faces'); }}>Facial Attributes</NavLink>
-                  </NavItem>
-                  <NavItem>
-                    <NavLink active={this.state.activeTab === "face_matches"} onClick={() => { this.tabToggle('face_matches'); }}>Known Faces</NavLink>
-                  </NavItem>
-                  <NavItem>
-                    <NavLink active={this.state.activeTab === "celebs"} onClick={() => { this.tabToggle('celebs'); }}>Celebrities</NavLink>
-                  </NavItem>
-                </Nav>
-                <TabContent activeTab={this.state.activeTab}>
-                  <TabPane tabId="labels">
-                    <Row>
-                      <Col align="center">
-                        {labels}
-                      </Col>
-                    </Row>
-                  </TabPane>
-                  <TabPane tabId="faces">
-                    <Row>
-                      <Col align="center">
-                        {atts}
-                      </Col>
-                    </Row>
-                  </TabPane>
-                  <TabPane tabId="face_matches">
-                    <Row>
-                      <Col align="center">
-                        {face_matches}
-                      </Col>
-                    </Row>
-                  </TabPane>
-                  <TabPane tabId="celebs">
-                    <Row>
-                      <Col align="center">
-                        {celebs}
-                      </Col>
-                    </Row>
-                  </TabPane>
-                </TabContent>
-              </div>
-            </Col>
-          </Row>
-        </Container>
-      );
-    }
-
-    else if (file_type === 'mp4') {
+    //BUGFIX/media-analysis-35 mp4 and mov results are the same, removing if (mov) {}
       //var self = this;
       var file_name = this.props.filename;
       var media_source = this.props.mediafile;
@@ -461,7 +342,6 @@ class VideoResults extends Component {
           </Row>
         </Container>
       );
-    }
   }
 }
 

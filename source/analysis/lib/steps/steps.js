@@ -19,6 +19,7 @@
 
 let AWS = require('aws-sdk');
 let creds = new AWS.EnvironmentCredentials('AWS');
+let uuid = require('uuid')
 
 const stateMachine = process.env.STATE_MACHINE;
 
@@ -54,8 +55,22 @@ const stateMachine = process.env.STATE_MACHINE;
         let step = new AWS.StepFunctions();
         step.startExecution(params, function(err, data) {
             if (err) {
+              //BUGFIX/media-analysis-35 adding a repeat step in if the exectuion id already exsits
+              if (err.code === 'ExecutionAlreadyExists') {
+                params.name = uuid.v4()
+                step.startExecution(params, function(err, data) {
+                  if (err) {
+                    console.log(err);
+                    return cb(err, null);
+                  } else {
+                    return cb(null, data);
+                  }
+                })
+              } else {
                 console.log(err);
                 return cb(err, null);
+              }
+              //BUGFIX
             }
             else {
                 return cb(null, data);

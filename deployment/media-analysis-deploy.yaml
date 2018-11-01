@@ -83,6 +83,12 @@ Resources:
                 IndexDocument: "index.html"
                 ErrorDocument: "index.html"
 
+    MediaAnalysisOriginAccessIdentity:
+      Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+      Properties:
+        CloudFrontOriginAccessIdentityConfig:
+          Comment: !Sub "access-identity-${MediaAnalysisWebsiteBucket}"
+
     MediaAnalysisWebsiteBucketPolicy:
         Type: "AWS::S3::BucketPolicy"
         Metadata:
@@ -100,7 +106,50 @@ Resources:
                       - "s3:GetObject"
                     Resource:
                       - !Sub '${MediaAnalysisWebsiteBucket.Arn}/*'
-                    Principal: '*'
+                    Principal:
+                      CanonicalUser: !GetAtt MediaAnalysisOriginAccessIdentity.S3CanonicalUserId
+
+    MediaAnalysisWebsiteDistribution:
+        Type: AWS::CloudFront::Distribution
+        Properties:
+            DistributionConfig:
+                Comment: "Website distribution for Media Analysis solution"
+                Origins:
+                    -
+                      Id: S3-solution-website
+                      DomainName: !Sub "${MediaAnalysisWebsiteBucket}.s3.amazonaws.com"
+                      S3OriginConfig:
+                        OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${MediaAnalysisOriginAccessIdentity}"
+                DefaultCacheBehavior:
+                    TargetOriginId: S3-solution-website
+                    AllowedMethods:
+                      - GET
+                      - HEAD
+                      - OPTIONS
+                      - PUT
+                      - POST
+                      - DELETE
+                      - PATCH
+                    CachedMethods:
+                        - GET
+                        - HEAD
+                        - OPTIONS
+                    ForwardedValues:
+                        QueryString: 'false'
+                    ViewerProtocolPolicy: redirect-to-https
+                DefaultRootObject: "index.html"
+                CustomErrorResponses:
+                  - ErrorCode: '404'
+                    ResponsePagePath: "/index.html"
+                    ResponseCode: '200'
+                  - ErrorCode: '403'
+                    ResponsePagePath: "/index.html"
+                    ResponseCode: '200'
+                IPV6Enabled: 'true'
+                ViewerCertificate:
+                    CloudFrontDefaultCertificate: 'true'
+                Enabled: 'true'
+                HttpVersion: 'http2'
 
     MediaAnalysisHelperRole:
         Type: AWS::IAM::Role
@@ -521,7 +570,7 @@ Resources:
                         </p>
                         <p>
                         Please sign in with the user name and your temporary password provided above at: <br />
-                        http://${MediaAnalysisWebsiteBucket}.s3-website.${AWS::Region}.amazonaws.com/
+                        !Sub https://${MediaAnalysisWebsiteDistribution.DomainName}
                         </p>
             AliasAttributes:
                 - email
@@ -540,7 +589,7 @@ Resources:
 Outputs:
     DemoWebsite:
         Description: "Media Analysis Demo Website URL"
-        Value: !Sub http://${MediaAnalysisWebsiteBucket}.s3-website.${AWS::Region}.amazonaws.com/
+        Value: !Sub https://${MediaAnalysisWebsiteDistribution.DomainName}
     MediaAnalysisApiEndpoint:
         Description: "Media Analysis API Gateway Endpoint"
         Value: !Join ["", ["https://",!GetAtt MediaAnalysisApiStack.Outputs.ApiId, ".execute-api.", !Ref "AWS::Region", ".amazonaws.com/prod"]]

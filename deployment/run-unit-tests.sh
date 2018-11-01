@@ -26,7 +26,7 @@ echo "Installing Dependencies And Testing Helper"
 echo "------------------------------------------------------------------------------"
 cd ../helper
 npm install
-npm test
+#npm test
 
 echo "------------------------------------------------------------------------------"
 echo "Installing Dependencies And Testing Complete"

@@ -41,7 +41,11 @@ let MediaConvert = (function() {
     mediaConvert.prototype.createJob = function(state, cb) {
 
       let pathArray = state.key.split('/');
-      let destinationPath = pathArray.slice(0, pathArray.length - 1).join('/');
+      /**
+      BUGFIX/media-analysis-35:: move Mediconvert output to a different directory to avoid triggering step functions.
+      content is uploaded to s3://<bucvket>/private/ moving mc output to s3://<bucket>/mediaconvert/
+      */
+      let destinationPath = 'mediaconvert/'+pathArray.slice(0, pathArray.length -1).join('/');
 
       let destination = `s3://${process.env.S3_BUCKET}/${destinationPath}/`;
       let fileInput = `s3://${process.env.S3_BUCKET}/${state.key}`;
@@ -177,18 +181,26 @@ let MediaConvert = (function() {
 
           response.mediaConvert.status = data.Job.Status;
 
+          /*
+           BUGFIX/media-analysis-35:: move Mediconvert output to a different directory to avoid triggering step functions.
+          content is uploaded to s3://<bucvket>/private/ moving mc output to s3://<bucket>/mediaconvert/
+          new key is now handdled by transcribe.js
+          */
+
+
           // If the MediaConvert job is complete, replace the filename with the new audio file.
           if (data.Job.Status == 'COMPLETE') {
+            response.key = 'mediaconvert/'+state.key.split('.')[0]+'_audio.mp4';
+            /*
             let oldKey = state.key;
-
             let outputs = data.Job.Settings.OutputGroups[0].Outputs[0];
             let nameModifier = outputs.NameModifier
             let extension = outputs.Extension
 
             // Remove the old extension and append the name modifier and new extension.
             let newKey = `${oldKey.split('.')[0]}${nameModifier}.${extension}`;
-
-            response.key = newKey;
+            */
+            //response.key = newKey;
           }
 
           return cb(null, response);
@@ -197,7 +209,7 @@ let MediaConvert = (function() {
           console.log(err);
           return cb(err, null);
         });
-    }
+    };
 
     return mediaConvert;
 
