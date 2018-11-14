@@ -117,7 +117,7 @@ Resources:
                 Origins:
                     -
                       Id: S3-solution-website
-                      DomainName: !Sub "${MediaAnalysisWebsiteBucket}.s3.amazonaws.com"
+                      DomainName: !Sub "${MediaAnalysisWebsiteBucket}.s3.${AWS::Region}.amazonaws.com"
                       S3OriginConfig:
                         OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${MediaAnalysisOriginAccessIdentity}"
                 DefaultCacheBehavior:
