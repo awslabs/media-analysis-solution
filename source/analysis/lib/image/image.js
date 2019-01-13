@@ -389,3 +389,51 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
  })();
 
  module.exports = image;
+
+      image.prototype.getText = function(image_info, cb){
+    let rek_params = {
+         Image: {
+             S3Object: {
+               Bucket: s3Bucket,
+               Name: image_info.key
+             }
+         }
+     };
+
+     let rekognition = new AWS.Rekognition();
+     rekognition.detectText(rek_params, function(err, data) {
+        if (err) {
+            return cb(err, null);
+        }
+        else {
+            
+            var text = [];
+            for (var t in data.TextDetections) {
+               if (data.TextDetections[t].Confidence >= confidence_score) {
+                   text.push(data.TextDetections[t].DetectedText);
+               }
+            }
+
+            let text_key = ['private',image_info.owner_id,'media',image_info.object_id,'results','text.json'].join("/");
+
+            let s3_params = {
+                Bucket: s3Bucket,
+                Key: text_key,
+                Body: JSON.stringify(data),
+                ContentType: 'application/json'
+            };
+
+            upload.respond(s3_params, function(err, response) {
+                if (err){
+                  return cb(err, null);
+                }
+                else {
+                    let text_response = {'key': text_key, 'text': text, 'status': "COMPLETE"};
+                    return cb(null,text_response);
+                }
+            });
+        }
+     });
+ };
+
+    
