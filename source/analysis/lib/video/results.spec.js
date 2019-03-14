@@ -459,7 +459,7 @@ describe('Results', function() {
         });
 
         //Persons
-        it('should return person tracking information if getPersonTracking and upload were successful', function(done) {
+        it('should return information if getPersonTracking and upload were successful', function(done) {
 
             event_info.video['job_tag'] = [event_info.object_id,'persons'].join('_');
 

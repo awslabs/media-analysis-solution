@@ -71,7 +71,7 @@ describe('Video', function() {
           AWS.restore('Rekognition');
         });
 
-        it('should return person tracking job information if startPersonTracking was successful', function(done) {
+        it('should return job information if startPersonTracking was successful', function(done) {
 
             AWS.mock('Rekognition', 'startPersonTracking', function(params, callback) {
                 callback(null, job_start_response);

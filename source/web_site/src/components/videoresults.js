@@ -10,7 +10,7 @@ class VideoResults extends Component {
 	    super(props);
       this.state = {
         activeTab: 'labels',
-        tracking: "nothing",
+        focusing: "nothing",
         boxes: [],
         captions: false
       }
@@ -206,15 +206,15 @@ class VideoResults extends Component {
 
 
       var atts = this.props.attributes.map(att => {
-          return(<Button color="primary" className="ml-1 mr-1 mb-1 mt-1" onClick={() => {this.setState({tracking:att.Name, boxes: att.Impressions});}}>{att.Name}</Button>)
+          return(<Button color="primary" className="ml-1 mr-1 mb-1 mt-1" onClick={() => {this.setState({focusing:att.Name, boxes: att.Impressions});}}>{att.Name}</Button>)
       });
 
       var celebs = this.props.individualcelebs.map(celeb => {
-          return(<Button color="primary" className="ml-1 mr-1 mb-1 mt-1" onClick={() => {this.setState({tracking:celeb.Name, boxes: celeb.Impressions});}}>{celeb.Name}</Button>)
+          return(<Button color="primary" className="ml-1 mr-1 mb-1 mt-1" onClick={() => {this.setState({focusing:celeb.Name, boxes: celeb.Impressions});}}>{celeb.Name}</Button>)
       });
 
       var face_matches = this.props.individualknownfaces.map(face => {
-          return(<Button color="primary" className="ml-1 mr-1 mb-1 mt-1" onClick={() => {this.setState({tracking:face.Name, boxes: face.Impressions});}}>{face.Name}</Button>)
+          return(<Button color="primary" className="ml-1 mr-1 mb-1 mt-1" onClick={() => {this.setState({focusing:face.Name, boxes: face.Impressions});}}>{face.Name}</Button>)
       });
 
       return (
@@ -234,8 +234,8 @@ class VideoResults extends Component {
             </Col>
             <Col md="4">
               <div>
-                <h5>Currently tracking:</h5>
-                <h6 align="center">{this.state.tracking}</h6>
+                <h5>Current focus:</h5>
+                <h6 align="center">{this.state.focusing}</h6>
                 <hr className="mt-2 mb-6" />
               </div>
               <div>
@@ -249,14 +249,14 @@ class VideoResults extends Component {
                 <Button className="mr-2 my-2" color="info" active={this.state.captions} onClick={() => {this.setState({captions: !this.state.captions}); }}>Captions</Button>
               </div>
               <div>
-                <h5>Click to track:</h5>
+                <h5>Click to focus:</h5>
                 <hr className="my-2" />
               </div>
               <div align="center">
-                <Button color="primary" className="mr-2 mt-2" onClick={() => { this.setState({tracking:"Persons", boxes: this.props.persons}); }}>Persons</Button>
-                <Button color="primary" className="mr-2 mt-2" onClick={() => { this.setState({tracking:"Faces", boxes: this.props.allfaces}); }}>Faces</Button>
-                <Button color="primary" className="mr-2 mt-2" onClick={() => { this.setState({tracking:"Celebrities", boxes: this.props.celebvideo}); }}>Celebrities</Button>
-                <Button color="primary" className="mr-2 mt-2" onClick={() => { this.setState({tracking:"Known Faces", boxes: this.props.allknownfaces}); }}>Known Faces</Button>
+                <Button color="primary" className="mr-2 mt-2" onClick={() => { this.setState({focusing:"Persons", boxes: this.props.persons}); }}>Persons</Button>
+                <Button color="primary" className="mr-2 mt-2" onClick={() => { this.setState({focusing:"Faces", boxes: this.props.allfaces}); }}>Faces</Button>
+                <Button color="primary" className="mr-2 mt-2" onClick={() => { this.setState({focusing:"Celebrities", boxes: this.props.celebvideo}); }}>Celebrities</Button>
+                <Button color="primary" className="mr-2 mt-2" onClick={() => { this.setState({focusing:"Known Faces", boxes: this.props.allknownfaces}); }}>Known Faces</Button>
               </div>
             </Col>
           </Row>

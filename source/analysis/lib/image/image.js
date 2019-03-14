@@ -22,7 +22,7 @@ let upload = require('./../upload');
 let creds = new AWS.EnvironmentCredentials('AWS');
 
 const s3Bucket = process.env.S3_BUCKET;
-const confidence_score = process.env.CONFIDENCE_SCORE;
+const confidence_score = parseInt(process.env.CONFIDENCE_SCORE);
 
 /**
  * Performs operations for image recognition actions using

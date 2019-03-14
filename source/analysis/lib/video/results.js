@@ -22,7 +22,7 @@ let upload = require('./../upload');
 let creds = new AWS.EnvironmentCredentials('AWS');
 
 const s3Bucket = process.env.S3_BUCKET;
-const confidence_score = process.env.CONFIDENCE_SCORE;
+const confidence_score = parseInt(process.env.CONFIDENCE_SCORE);
 
 /**
  * Collects and stores video analysis results from
@@ -373,7 +373,7 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
     };
 
      /**
-      * Gets results from Amazon Rekognition person tracking
+      * Gets results from Amazon Rekognition 
       * @param {JSON} params - information needed to retrieve results
       * @param {string} owner_id - cognitoIdentityId of the media file owner
       * @param {string} object_id - UUID of the media file

@@ -104,6 +104,13 @@ Each microservice in analysis/lib/ follows the structure of:
   |-[service-name].js
 ```
 
+### v2.0.0 changes
+
+* Support programmatically set language code when processing transcription and comprehend
+* Support programmatically enable/disable specific analysis processing such celebrity detection, label detection
+* Enhanced resiliency - added retry logic when calling low TPS api; for example, get-transcription-job
+
+
 ***
 
 Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.

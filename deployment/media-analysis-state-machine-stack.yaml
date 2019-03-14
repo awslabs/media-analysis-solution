@@ -19,8 +19,13 @@ Resources:
               - |-
                 {
                   "Comment": "A state machine that orchestrates the analysis.",
-                  "StartAt": "Analyze Media",
+                  "StartAt": "Sanity Check",
                   "States": {
+                    "Sanity Check": {
+                      "Type": "Task",
+                      "Resource": "${lambdaArn}",
+                      "Next": "Analyze Media"
+                    },
                     "Analyze Media": {
                       "Type": "Parallel",
                       "Next": "Store Results",
@@ -144,20 +149,6 @@ Resources:
                               "Type": "Choice",
                               "Choices": [
                                 {
-                                  "Or":[
-                                    {
-                                  "Variable": "$.file_type",
-                                  "StringEquals": "mp4"
-                                    },
-                                    {
-                                  "Variable": "$.file_type",
-                                  "StringEquals": "mov"
-                                    }
-
-                                  ],
-                                   "Next": "Convert to Audio"
-                                },
-                                {
                                 "Or": [{
                                     "Variable": "$.file_type",
                                     "StringEquals": "mp3"
@@ -173,15 +164,59 @@ Resources:
                                   {
                                     "Variable": "$.file_type",
                                     "StringEquals": "flac"
+                                  },
+                                  {
+                                    "Variable": "$.file_type",
+                                    "StringEquals": "mp4"
                                   }
                                 ],
-                                "Next": "Audio-Submit Params"
-                              }],
+                                "Next": "Audio-Analysis Enabled?"
+                                }
+                              ],
                               "Default": "Not Audio"
                             },
                             "Not Audio": {
                               "Type": "Succeed"
                             },
+
+                            "Audio-Analysis Enabled?": {
+                              "Type": "Choice",
+                              "Choices": [
+                                {
+                                  "And": [{
+                                    "Variable": "$.ai_options.transcript",
+                                    "BooleanEquals": false
+                                  },
+                                  {
+                                    "Variable": "$.ai_options.entities",
+                                    "BooleanEquals": false
+                                  },
+                                  {
+                                    "Variable": "$.ai_options.phrases",
+                                    "BooleanEquals": false
+                                  }],
+                                  "Next": "Audio-Analysis Skipped"
+                                }
+                              ],
+                              "Default": "Should Convert?"
+                            },
+
+                            "Audio-Analysis Skipped": {
+                              "Type": "Succeed"
+                            },
+
+                            "Should Convert?": {
+                              "Type": "Choice",
+                              "Choices": [
+                                {
+                                  "Variable": "$.file_type",
+                                  "StringEquals": "mp4",
+                                  "Next": "Convert to Audio"
+                                }
+                              ],
+                              "Default": "Audio-Submit Params"
+                            },
+
                             "Convert to Audio": {
                               "Type": "Pass",
                               "Result": {
@@ -335,8 +370,21 @@ Resources:
                               "Type": "Parallel",
                               "End": true,
                               "Branches": [{
-                                  "StartAt": "Entity Params",
+                                  "StartAt": "Entity Enabled?",
                                   "States": {
+                                    "Entity Enabled?": {
+                                      "Type": "Choice",
+                                      "Choices": [{
+                                        "Variable": "$.ai_options.entities",
+                                        "BooleanEquals": false,
+                                        "Next": "Entity Skipped"
+                                        }],
+                                      "Default": "Entity Params"
+                                    },
+                                    "Entity Skipped": {
+                                      "Type": "Succeed"
+                                    },
+
                                     "Entity Params": {
                                       "Type": "Pass",
                                       "Result": {
@@ -356,8 +404,21 @@ Resources:
                                   }
                                 },
                                 {
-                                  "StartAt": "Phrase Params",
+                                  "StartAt": "Phrase Enabled?",
                                   "States": {
+                                    "Phrase Enabled?": {
+                                      "Type": "Choice",
+                                      "Choices": [{
+                                        "Variable": "$.ai_options.phrases",
+                                        "BooleanEquals": false,
+                                        "Next": "Phrase Skipped"
+                                        }],
+                                      "Default": "Phrase Params"
+                                    },
+                                    "Phrase Skipped": {
+                                      "Type": "Succeed"
+                                    },
+
                                     "Phrase Params": {
                                       "Type": "Pass",
                                       "Result": {
@@ -406,8 +467,20 @@ Resources:
                               "Type": "Parallel",
                               "End": true,
                               "Branches": [{
-                                  "StartAt": "Video-Label Params",
+                                  "StartAt": "Label Enabled?",
                                   "States": {
+                                    "Label Enabled?": {
+                                      "Type": "Choice",
+                                      "Choices": [{
+                                        "Variable": "$.ai_options.labels",
+                                        "BooleanEquals": false,
+                                        "Next": "Label Skipped"
+                                        }],
+                                      "Default": "Video-Label Params"
+                                    },
+                                    "Label Skipped": {
+                                      "Type": "Succeed"
+                                    },
                                     "Video-Label Params": {
                                       "Type": "Pass",
                                       "Result": {
@@ -501,8 +574,20 @@ Resources:
                                   }
                                 },
                                 {
-                                  "StartAt": "Video-Celeb Params",
+                                  "StartAt": "Celeb Enabled?",
                                   "States": {
+                                    "Celeb Enabled?": {
+                                      "Type": "Choice",
+                                      "Choices": [{
+                                        "Variable": "$.ai_options.celebs",
+                                        "BooleanEquals": false,
+                                        "Next": "Celeb Skipped"
+                                        }],
+                                      "Default": "Video-Celeb Params"
+                                    },
+                                    "Celeb Skipped": {
+                                      "Type": "Succeed"
+                                    },
                                     "Video-Celeb Params": {
                                       "Type": "Pass",
                                       "Result": {
@@ -596,8 +681,20 @@ Resources:
                                   }
                                 },
                                 {
-                                  "StartAt": "Video-Face Params",
+                                  "StartAt": "Face Enabled?",
                                   "States": {
+                                    "Face Enabled?": {
+                                      "Type": "Choice",
+                                      "Choices": [{
+                                        "Variable": "$.ai_options.faces",
+                                        "BooleanEquals": false,
+                                        "Next": "Face Skipped"
+                                        }],
+                                      "Default": "Video-Face Params"
+                                    },
+                                    "Face Skipped": {
+                                      "Type": "Succeed"
+                                    },
                                     "Video-Face Params": {
                                       "Type": "Pass",
                                       "Result": {
@@ -691,8 +788,21 @@ Resources:
                                   }
                                 },
                                 {
-                                  "StartAt" : "Video-Face-Match Params",
+                                  "StartAt" : "Face-Match Enabled?",
                                   "States": {
+                                    "Face-Match Enabled?": {
+                                      "Type": "Choice",
+                                      "Choices": [{
+                                        "Variable": "$.ai_options.face_matches",
+                                        "BooleanEquals": false,
+                                        "Next": "Face-Match Skipped"
+                                        }],
+                                      "Default": "Video-Face-Match Params"
+                                    },
+                                    "Face-Match Skipped": {
+                                      "Type": "Succeed"
+                                    },
+
                                     "Video-Face-Match Params": {
                                       "Type": "Pass",
                                       "Result": {
@@ -804,8 +914,21 @@ Resources:
                                   }
                                 },
                                 {
-                                  "StartAt": "Video-Person Params",
+                                  "StartAt": "Person Enabled?",
                                   "States": {
+                                    "Person Enabled?": {
+                                      "Type": "Choice",
+                                      "Choices": [{
+                                        "Variable": "$.ai_options.persons",
+                                        "BooleanEquals": false,
+                                        "Next": "Person Skipped"
+                                        }],
+                                      "Default": "Video-Person Params"
+                                    },
+                                    "Person Skipped": {
+                                      "Type": "Succeed"
+                                    },
+
                                     "Video-Person Params": {
                                       "Type": "Pass",
                                       "Result": {

@@ -21,7 +21,7 @@ let AWS = require('aws-sdk');
 
 let creds = new AWS.EnvironmentCredentials('AWS');
 const s3Bucket = process.env.S3_BUCKET;
-const confidence_score = process.env.CONFIDENCE_SCORE;
+const confidence_score = parseInt(process.env.CONFIDENCE_SCORE);
 
 /**
  * Constructs deatiled metadata object
@@ -430,12 +430,13 @@ let lookup = (function() {
                         for (var f in face_match_data.FaceMatches) {
                             if (face_match_data.FaceMatches[f].Similarity >= confidence_score) {
                               if ((face_match_data.FaceMatches[f].Face.ExternalImageId in FaceMatches) == false) {
+                                // 02/13/2019 - V98480687 - bounding box fix
                                 FaceMatches[face_match_data.FaceMatches[f].Face.ExternalImageId] = {};
                                 FaceMatches[face_match_data.FaceMatches[f].Face.ExternalImageId]['ExternalImageId'] = face_match_data.FaceMatches[f].Face.ExternalImageId;
-                                FaceMatches[face_match_data.FaceMatches[f].Face.ExternalImageId]['Impressions'] = [{'Timestamp':null,'Confidence':face_match_data.FaceMatches[f].Similarity, 'Face':{'FaceId': face_match_data.FaceMatches[f].Face.FaceId, 'BoundingBox': face_match_data.FaceMatches[f].Face.BoundingBox}}];
+                                FaceMatches[face_match_data.FaceMatches[f].Face.ExternalImageId]['Impressions'] = [{'Timestamp':null,'Confidence':face_match_data.FaceMatches[f].Similarity, 'Face':{'FaceId': face_match_data.FaceMatches[f].Face.FaceId, 'BoundingBox': face_match_data.SearchedFaceBoundingBox}}];
                               }
                               else {
-                                FaceMatches[face_match_data.FaceMatches[f].Face.ExternalImageId]['Impressions'].push({'Timestamp':null,'Confidence':face_match_data.FaceMatches[f].Similarity, 'Face':{'FaceId': face_match_data.FaceMatches[f].Face.FaceId, 'BoundingBox': face_match_data.FaceMatches[f].Face.BoundingBox}});
+                                FaceMatches[face_match_data.FaceMatches[f].Face.ExternalImageId]['Impressions'].push({'Timestamp':null,'Confidence':face_match_data.FaceMatches[f].Similarity, 'Face':{'FaceId': face_match_data.FaceMatches[f].Face.FaceId, 'BoundingBox': face_match_data.SearchedFaceBoundingBox}});
                               }
                             }
                         }
@@ -594,7 +595,7 @@ let lookup = (function() {
                   return cb(err, null);
               }
               else {
-                  console.log('Building person tracking data output');
+                  console.log('Building person focusing data output');
                   let persons_data = JSON.parse(data.Body.toString('utf-8'));
                   let persons_out = {'s3':{'bucket':s3Bucket,'key':['private',owner_id,'media',object_id,'results',filename].join('/')}, 'Persons':persons_data};
 

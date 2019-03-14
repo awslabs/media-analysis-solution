@@ -22,7 +22,7 @@ let upload = require('./../upload');
 let creds = new AWS.EnvironmentCredentials('AWS');
 
 const s3Bucket = process.env.S3_BUCKET;
-const confidence_score = process.env.CONFIDENCE_SCORE;
+const confidence_score = parseInt(process.env.CONFIDENCE_SCORE);
 
 /**
  * Performs operations for natural language processing using
@@ -50,6 +50,7 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
             Bucket: s3Bucket,
             Key: transcript_info.results.transcript.key
         }
+        let language_code = ((transcript_info.ai_options || {}).language_code || 'en').slice(0, 2);
         getTranscript(transcript_params, function(err, data) {
             if (err) {
               return cb(err,null);
@@ -151,7 +152,7 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
                                 }
                             });
                           }
-                      });
+                      }, language_code);
                     }
                   });
               }
@@ -170,6 +171,7 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
              Bucket: s3Bucket,
              Key: transcript_info.results.transcript.key
          }
+         let language_code = ((transcript_info.ai_options || {}).language_code || 'en').slice(0, 2);
          getTranscript(transcript_params, function(err, data) {
              if (err) {
                return cb(err,null);
@@ -271,7 +273,7 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
                                  }
                              });
                            }
-                       });
+                       }, language_code);
                      }
                    });
                }
@@ -288,11 +290,11 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
       * @param {detectEntities~callback} cb - The callback that handles the response.
       */
 
-     let detectEntities = function(transcripts, metadata, errors, i, cb){
+     let detectEntities = function(transcripts, metadata, errors, i, cb, language_code = 'en'){
        console.log('executing entity detection');
        if (i < transcripts.length) {
            let params = {
-               LanguageCode: 'en',
+               LanguageCode: language_code,
                TextList: transcripts.splice(i, i+25)
            };
            let comprehend = new AWS.Comprehend();
@@ -306,7 +308,7 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
                        metadata.push.apply(metadata,data.ResultList[r].Entities);
                    }
                    i += 25;
-                   detectEntities(transcripts,metadata,errors,i,cb);
+                   detectEntities(transcripts,metadata,errors,i,cb,language_code);
                }
            });
         }
@@ -327,11 +329,11 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
      * @param {detectPhrases~callback} cb - The callback that handles the response.
      */
 
-    let detectPhrases = function(transcripts, metadata, errors, i, cb){
+    let detectPhrases = function(transcripts, metadata, errors, i, cb, language_code = 'en'){
       console.log('executing phrase detection');
       if (i < transcripts.length) {
           let params = {
-              LanguageCode: 'en',
+              LanguageCode: language_code,
               TextList: transcripts.splice(i, i+25)
           };
           let comprehend = new AWS.Comprehend();
@@ -345,7 +347,7 @@ const confidence_score = process.env.CONFIDENCE_SCORE;
                       metadata.push.apply(metadata,data.ResultList[r].KeyPhrases);
                   }
                   i += 25;
-                  detectPhrases(transcripts,metadata,errors,i,cb);
+                  detectPhrases(transcripts,metadata,errors,i,cb, language_code);
               }
           });
        }

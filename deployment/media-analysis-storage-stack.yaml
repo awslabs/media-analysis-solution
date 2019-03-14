@@ -19,6 +19,8 @@ Mappings:
             InstanceType: "m4.large.elasticsearch"
         eu-west-1:
             InstanceType: "m4.large.elasticsearch"
+        ap-southeast-2:
+            InstanceType: "m4.large.elasticsearch"
 
     SizeMap:
         Small:

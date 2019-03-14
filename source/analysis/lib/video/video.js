@@ -72,13 +72,13 @@ const s3Bucket = process.env.S3_BUCKET;
      };
 
      /**
-      * Tracks persons in a video
+      * Focus persons in a video
       * @param {JSON} video_info - information about the video
       * @param {startPersons~callback} cb - The callback that handles the response.
       */
 
       video.prototype.startPersons = function(video_info, cb) {
-         console.log('Executing video person tracking');
+         console.log('Executing video person focusing');
 
          let job_tag = [video_info.object_id,'persons'].join('_');
          let rek_params = {

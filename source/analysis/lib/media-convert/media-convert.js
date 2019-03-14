@@ -17,6 +17,7 @@
 
 'use strict';
 
+let PATH = require('path');
 let AWS = require('aws-sdk');
 let creds = new AWS.EnvironmentCredentials('AWS');
 
@@ -118,33 +119,38 @@ let MediaConvert = (function() {
           }
       };
 
-      let mediaconvert = new AWS.MediaConvert({
-        region: process.env.AWS_REGION
-      });
-
-      mediaconvert.describeEndpoints().promise()
-        .then(data => {
-          mediaconvert = new AWS.MediaConvert({
-            endpoint: data.Endpoints[0].Url,
-            region: process.env.AWS_REGION
-          });
-
-          return mediaconvert.createJob(params).promise();
-        })
-        .then(data => {
-
-          let resp = {
-            jobDidStart: true,
-            data: data
-          }
-
-          return cb(null, resp);
-
-        })
-        .catch(err => {
-            console.log(err);
-            return cb(err, null);
+      let _describeEndpoints = (resolve) => {
+        let mediaconvert = new AWS.MediaConvert({
+          region: process.env.AWS_REGION
         });
+
+        mediaconvert.describeEndpoints().promise()
+          .then(data => {
+            mediaconvert = new AWS.MediaConvert({
+              endpoint: data.Endpoints[0].Url,
+              region: process.env.AWS_REGION
+            });
+
+            return mediaconvert.createJob(params).promise();
+          })
+          .then(data => {
+
+            let resp = {
+              jobDidStart: true,
+              data: data
+            }
+
+            return resolve(resp);
+          })
+          .catch(err => {
+              console.log(err);
+              return Promise.reject(err);
+          });
+      };
+
+      return this.retry(4, _describeEndpoints, 200)
+        .then(result => cb(null, result))
+        .catch(e => cb(e, null));
     };
 
     /**
@@ -154,11 +160,12 @@ let MediaConvert = (function() {
      */
     mediaConvert.prototype.getJobStatus = function(state, cb) {
 
-      var mediaconvert = new AWS.MediaConvert({
-        region: process.env.AWS_REGION
-      });
+      let _describeEndpoints = (resolve) => {
+        var mediaconvert = new AWS.MediaConvert({
+          region: process.env.AWS_REGION
+        });
 
-      mediaconvert.describeEndpoints().promise()
+        mediaconvert.describeEndpoints().promise()
         .then(data => {
 
           // Create a new MediaConvert object with an endpoint.
@@ -190,7 +197,11 @@ let MediaConvert = (function() {
 
           // If the MediaConvert job is complete, replace the filename with the new audio file.
           if (data.Job.Status == 'COMPLETE') {
-            response.key = 'mediaconvert/'+state.key.split('.')[0]+'_audio.mp4';
+            let {
+              dir,
+              name,
+            } = PATH.parse(state.key);
+            response.key = PATH.join('mediaconvert', dir, `${name}_audio.mp4`);
             /*
             let oldKey = state.key;
             let outputs = data.Job.Settings.OutputGroups[0].Outputs[0];
@@ -203,13 +214,39 @@ let MediaConvert = (function() {
             //response.key = newKey;
           }
 
-          return cb(null, response);
+          return resolve(response);
         })
         .catch(err => {
           console.log(err);
-          return cb(err, null);
+          return Promise.reject(err);
         });
+      };
+
+      return this.retry(4, _describeEndpoints, 200)
+        .then(result => cb(null, result))
+        .catch(e => cb(e, null));
+
     };
+
+    mediaConvert.prototype.pause = function(duration) {
+      return new Promise(res =>
+        setTimeout(res, duration));
+    }
+
+    mediaConvert.prototype.retry = function(retries, fn, delay = 0) {
+      let promise = new Promise(res => fn(res));
+
+      return promise.catch((e) => {
+        console.log(`mediaConvert.${fn.name} caught error ${e.message}, retry in ${delay}s (${retries} retries left)...`);
+
+        if (retries > 0) {
+          return this.pause(delay).then(() =>
+            this.retry(retries - 1, fn, delay * 2));
+        }
+
+        return Promise.reject(e);
+      });
+    }
 
     return mediaConvert;
 

@@ -42,7 +42,13 @@ module.exports.respond = function(event, cb) {
        *  New media uploaded to be analyzed.
        *  Don't start state machine for metadata upload.
        */
-
+       
+      // 02/05/2019 - SIM:media-analysis-6 - handle media with no extension
+      if (media_key.split('/')[4] == 'content' && !media_formats.includes(media_key.split('.').pop())){
+          //console.log('unsupported media extension');
+          return cb('unsupported media extension', null);
+      }  
+      
       if (media_key.split('/')[4] == 'content' && media_formats.includes(media_key.split('.').pop())) {
           console.log('New media uploaded:', JSON.stringify(event, null, 2));
 
@@ -102,7 +108,29 @@ module.exports.respond = function(event, cb) {
     */
 
    else if (event.Records[0].eventSource == 'media-analysis') {
-       if (event.lambda.service_name == 'image'){
+
+        /**
+         * Initial state, merge default ai_options.<type> with the payload
+         */
+       if (event.lambda === undefined) {
+            let merged = Object.assign({
+                ai_options: {
+                    labels: true,
+                    celebs: true,
+                    faces: true,
+                    face_matches: true,
+                    persons: true,
+                    transcript: true,
+                    entities: true,
+                    phrases: true,
+                    language_code: 'en-US',
+                },
+            }, event);
+
+            console.log(`original: ${JSON.stringify(event, null, 2)}, merged = ${JSON.stringify(merged, null, 2)}`)
+            return cb(null, merged);
+       }
+       else if (event.lambda.service_name == 'image'){
            image.respond(event, function(err, data) {
                if (err) {
                    return cb(err, null);

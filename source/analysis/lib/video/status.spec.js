@@ -148,7 +148,7 @@ describe('Status', function() {
 
         });
 
-        it('should return person tracking job status if getPersonTracking was successful', function(done) {
+        it('should return job status if getPersonTracking was successful', function(done) {
 
             event_info.video['job_tag'] = [event_info.object_id,'persons'].join('_');
 

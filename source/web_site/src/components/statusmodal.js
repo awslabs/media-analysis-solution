@@ -216,7 +216,7 @@ class StatusModal extends Component {
                 <Progress animated color={this.state.faces_color} value={this.state.faces_value} />
                 <div>Face Matching</div>
                 <Progress animated color={this.state.face_matches_color} value={this.state.face_matches_value} />
-                <div>Person Tracking</div>
+                <div>Person Detection</div>
                 <Progress animated color={this.state.persons_color} value={this.state.persons_value} />
                 <div>Celebrities</div>
                 <Progress animated color={this.state.celebs_color} value={this.state.celebs_value} />

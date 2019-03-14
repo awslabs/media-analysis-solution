@@ -211,7 +211,7 @@ class Result extends Component {
   getPersons() {
     var self = this;
     var persons_path = ['/lookup',this.props.match.params.objectid,'persons'].join('/');
-    var person_tracking = {};
+    var person_focusing = {};
 
     let _getPersons = function(path, persons) {
         API.get('MediaAnalysisApi', path, {})
@@ -224,19 +224,19 @@ class Result extends Component {
                   let data = {'Persons': {'Persons': persons}};
                   for (var p in data.Persons.Persons) {
                     if ('BoundingBox' in data.Persons.Persons[p].Person) {
-                        if ((Math.ceil((data.Persons.Persons[p].Timestamp)/100)*100) in person_tracking) {
-                          if ((data.Persons.Persons[p].Person.Index in person_tracking[Math.ceil((data.Persons.Persons[p].Timestamp)/100)*100]) === false) {
-                              person_tracking[Math.ceil((data.Persons.Persons[p].Timestamp)/100)*100][data.Persons.Persons[p].Person.Index] = {"Index":data.Persons.Persons[p].Person.Index, "BoundingBox":data.Persons.Persons[p].Person.BoundingBox};
+                        if ((Math.ceil((data.Persons.Persons[p].Timestamp)/100)*100) in person_focusing) {
+                          if ((data.Persons.Persons[p].Person.Index in person_focusing[Math.ceil((data.Persons.Persons[p].Timestamp)/100)*100]) === false) {
+                              person_focusing[Math.ceil((data.Persons.Persons[p].Timestamp)/100)*100][data.Persons.Persons[p].Person.Index] = {"Index":data.Persons.Persons[p].Person.Index, "BoundingBox":data.Persons.Persons[p].Person.BoundingBox};
                           }
                         }
                         else {
-                            person_tracking[Math.ceil((data.Persons.Persons[p].Timestamp)/100)*100] = {};
-                            person_tracking[Math.ceil((data.Persons.Persons[p].Timestamp)/100)*100][data.Persons.Persons[p].Person.Index] = {"Index":data.Persons.Persons[p].Person.Index, "BoundingBox":data.Persons.Persons[p].Person.BoundingBox};
+                            person_focusing[Math.ceil((data.Persons.Persons[p].Timestamp)/100)*100] = {};
+                            person_focusing[Math.ceil((data.Persons.Persons[p].Timestamp)/100)*100][data.Persons.Persons[p].Person.Index] = {"Index":data.Persons.Persons[p].Person.Index, "BoundingBox":data.Persons.Persons[p].Person.BoundingBox};
                         }
                     }
                   }
                   self.setState({
-                      "persons": person_tracking
+                      "persons": person_focusing
                   });
               }
           })

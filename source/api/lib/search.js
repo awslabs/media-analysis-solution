@@ -22,7 +22,7 @@ let AWS = require('aws-sdk');
 let creds = new AWS.EnvironmentCredentials('AWS');
 const endpoint = process.env.DOMAIN_ENDPOINT;
 const es_index = process.env.ES_INDEX;
-const search_result_limit = process.env.SEARCH_RESULT_LIMIT;
+const search_result_limit = parseInt(process.env.SEARCH_RESULT_LIMIT);
 
 /**
  * Performs search operations on the ElasticSearch cluster
