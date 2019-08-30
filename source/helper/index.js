@@ -1,15 +1,19 @@
-/*********************************************************************************************************************
- *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://aws.amazon.com/asl/                                                                                    *
- *                                                                                                                    *
- *  or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+/********************************************************************************************************************* 
+ *  Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           * 
+ *                                                                                                                    * 
+ *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    * 
+ *  with the License. A copy of the License is located at                                                             * 
+ *                                                                                                                    * 
+ *      http://www.apache.org/licenses/LICENSE-2.0                                                                    * 
+ *                                                                                                                    * 
+ *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES * 
+ *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    * 
+ *  and limitations under the License.                                                                                * 
+ *********************************************************************************************************************/ 
+ 
+/** 
+ * @author Solution Builders 
+ */ 
 
 'use strict';
 
@@ -67,7 +71,7 @@ exports.handler = function(event, context, callback) {
         if (event.ResourceProperties.customAction === 'createIndex') {
             let _eshelper = new eshelper();
 
-            _eshelper.createIndex(event.ResourceProperties.clusterUrl, event.ResourceProperties.es_index, function(err, data) {
+            _eshelper.createIndex(event.ResourceProperties.clusterUrl, event.ResourceProperties.es_index, event.ResourceProperties.es_version, function(err, data) {
                 if (err) {
                     console.log(err);
                     let responseData = {
@@ -168,6 +172,32 @@ exports.handler = function(event, context, callback) {
         }
     }
 
+    if (event.RequestType === 'Update') {
+        if (event.ResourceProperties.customAction === 'copyS3assets') {
+            let _s3helper = new s3helper();
+
+            _s3helper.copyAssets(event.ResourceProperties.manifestKey,
+              event.ResourceProperties.sourceS3Bucket,
+              event.ResourceProperties.sourceS3key,
+              event.ResourceProperties.destS3Bucket, function(err, data) {
+                if (err) {
+                    console.log(err);
+                    let responseData = {
+                      Error: 'Copying S3 assets failed'
+                    };
+                }
+                else {
+                    console.log(data);
+                    responseStatus = 'SUCCESS';
+                }
+
+                sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+            });
+        }
+        else {
+            sendResponse(event, callback, context.logStreamName, 'SUCCESS', responseData);
+        }
+    }
 };
 
 /**

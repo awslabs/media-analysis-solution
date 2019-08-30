@@ -1,19 +1,19 @@
-/*********************************************************************************************************************
- *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://aws.amazon.com/asl/                                                                                    *
- *                                                                                                                    *
- *  or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
-
-/**
- * @author Solution Builders
- */
+/********************************************************************************************************************* 
+ *  Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           * 
+ *                                                                                                                    * 
+ *  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    * 
+ *  with the License. A copy of the License is located at                                                             * 
+ *                                                                                                                    * 
+ *      http://www.apache.org/licenses/LICENSE-2.0                                                                    * 
+ *                                                                                                                    * 
+ *  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES * 
+ *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    * 
+ *  and limitations under the License.                                                                                * 
+ *********************************************************************************************************************/ 
+ 
+/** 
+ * @author Solution Builders 
+ */ 
 
 'use strict';
 
@@ -22,6 +22,7 @@ let creds = new AWS.EnvironmentCredentials('AWS');
 
 const endpoint = process.env.DOMAIN_ENDPOINT;
 const es_index = process.env.ES_INDEX;
+const es_version = process.env.ES_VERSION;
 
 /**
  * Performs operations for interacting with the elasticsearch cluster
@@ -50,7 +51,8 @@ let elasticsearch = (function() {
             amazonES: {
                 region: process.env.AWS_REGION,
                 credentials: creds
-            }
+            },
+            apiVersion: es_version
         });
 
         client.index({

@@ -542,6 +542,11 @@ class Result extends Component {
         });
 
         var phrases = this.state.phrase_list.map(phrase => {
+          //bugfix/media-analysis-75 button Ids cannot start with a digits
+            if (phrase.Id.match(/^\d/)) {
+              phrase.Id = 'n'+phrase.Id;
+            }
+
             return(
               <div style={{"display":"inline-block"}}>
                 <Button id={phrase.Id.replace(/\s+/g, '-').toLowerCase()} color="secondary" className="ml-1 mr-1 mb-1 mt-1">{phrase.Name}</Button>
@@ -553,6 +558,10 @@ class Result extends Component {
         });
 
         var entities = this.state.entity_list.map(entity => {
+          //bugfix/media-analysis-75 button Ids cannot start with a digits
+            if (entity.Id.match(/^\d/)) {
+              entity.Id = 'n'+entity.Id;
+            }
             return(
               <div style={{"display":"inline-block"}}>
                 <Button id={entity.Id.replace(/\s+/g, '-').toLowerCase()} color="secondary" className="ml-1 mr-1 mb-1 mt-1">{entity.Name}</Button>

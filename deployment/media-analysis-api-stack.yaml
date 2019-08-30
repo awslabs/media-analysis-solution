@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: (SO0042-api) Media Analysis Solution - The AWS CloudFormation template that provisions the Media Analysis Solution RESTful API using Amazon API Gateway.
+Description: (SO0042-api) %%SOLUTION_NAME%% - The AWS CloudFormation template that provisions the %%SOLUTION_NAME%% RESTful API using Amazon API Gateway. Version %%VERSION%%
 
 Parameters:
     StateMachineArn:
@@ -8,6 +8,9 @@ Parameters:
     DomainEndpoint:
         Type: String
         Description: "ElasticSearch cluster domain endpoint"
+    DomainVersion:
+        Type: String
+        Description: "ElasticSearch cluster domain version"
     S3Bucket:
         Type: String
         Description: "Name of the solution S3 Bucket"
@@ -16,7 +19,7 @@ Mappings:
     SourceCode:
         General:
             S3Bucket: '%%BUCKET_NAME%%'
-            KeyPrefix: "media-analysis-solution/%%VERSION%%"
+            KeyPrefix: "%%SOLUTION_NAME%%/%%VERSION%%"
 
 Resources:
     MediaAnalysisApiPermission:
@@ -44,12 +47,18 @@ Resources:
                     CONFIDENCE_SCORE: '0'
                     DOMAIN_ENDPOINT: !Ref DomainEndpoint
                     ES_INDEX: media-analysis
+                    ES_VERSION: !Ref DomainVersion
                     S3_BUCKET: !Ref S3Bucket
                     STATE_MACHINE: !Ref StateMachineArn
                     SEARCH_RESULT_LIMIT: '30'
 
     MediaAnalysisApiRole:
         Type: AWS::IAM::Role
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W11
+                      reason: Allow * in the ARN of the resources deployed by this solution.
         Properties:
             AssumeRolePolicyDocument:
               Version: "2012-10-17"
@@ -73,6 +82,10 @@ Resources:
                         Action:
                           - "es:ESHttpGet"
                           - "es:ESHttpPost"
+                        # Wildcards on ElasticSearch domain resources are
+                        # present because documents are indexed based off of
+                        # the Step Function job ID, which is unique per
+                        # invocation.
                         Resource:
                           - !Join ["", ["arn:aws:es:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":domain/media-analysis/*"]]
                       -
@@ -97,7 +110,7 @@ Resources:
                           - "logs:CreateLogGroup"
                           - "logs:CreateLogStream"
                           - "logs:PutLogEvents"
-                        Resource: "*"
+                        Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
 
     DeployMediaAnalysisAPI:
       Type: "AWS::ApiGateway::Deployment"
@@ -108,7 +121,6 @@ Resources:
     MediaAnalysisLambdaExecRole:
         Type: "AWS::IAM::Role"
         Properties:
-            RoleName: !Join ["-", ["media-analysis-apigw-role", Ref: "AWS::Region" ]]
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:

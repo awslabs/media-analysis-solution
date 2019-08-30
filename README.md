@@ -12,8 +12,8 @@ For more information and a detailed deployment guide visit the Media Analysis So
 * Next, run unit tests to make sure added customization passes the tests
 ```
 cd ./deployment
-chmod +x ./run-unit-tests.sh  \n
-./run-unit-tests.sh \n
+chmod +x ./run-unit-tests.sh
+./run-unit-tests.sh
 ```
 ## Building distributable for customization
 * Configure the bucket name of your target Amazon S3 distribution bucket
@@ -25,13 +25,13 @@ _Note:_ You would have to create an S3 bucket with the prefix 'my-bucket-name-<a
 
 * Now build the distributable:
 ```
-chmod +x ./build-s3-dist.sh \n
-./build-s3-dist.sh $DIST_OUTPUT_BUCKET $VERSION \n
+chmod +x ./build-s3-dist.sh
+./build-s3-dist.sh $DIST_OUTPUT_BUCKET media-analysis-solution $VERSION
 ```
 
 * Deploy the distributable to an Amazon S3 bucket in your account. _Note:_ you must have the AWS Command Line Interface installed.
 ```
-aws s3 cp ./dist/ s3://my-bucket-name-<aws_region>/media-analysis-solution/<my-version>/ --recursive --acl bucket-owner-full-control --profile aws-cred-profile-name \n
+aws s3 cp ./dist/ s3://my-bucket-name-<aws_region>/media-analysis-solution/<my-version>/ --recursive --acl bucket-owner-full-control --profile aws-cred-profile-name
 ```
 
 * Get the link of the media-analysis-deploy.template uploaded to your Amazon S3 bucket.
@@ -87,9 +87,9 @@ The Media Analysis Solution consists of a demo website, an analysis orchestratio
     |-index.js
     |-package.json
   |-web_site/                               [ ReactJS demo website for the solution ]
-    |-public/                               
-    |-src/                                  
-      |-components/                         
+    |-public/
+    |-src/
+      |-components/
       |-img/
       |-styles/
     |-package.json
@@ -104,19 +104,18 @@ Each microservice in analysis/lib/ follows the structure of:
   |-[service-name].js
 ```
 
-### v2.0.0 changes
-
-* Support programmatically set language code when processing transcription and comprehend
-* Support programmatically enable/disable specific analysis processing such celebrity detection, label detection
-* Enhanced resiliency - added retry logic when calling low TPS api; for example, get-transcription-job
-
-
 ***
 
-Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance with the License. A copy of the License is located at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://aws.amazon.com/asl/
+    http://www.apache.org/licenses/LICENSE-2.0
 
-or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions and limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.

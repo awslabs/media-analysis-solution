@@ -1,0 +1,25 @@
+Media Analysis Solution
+Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+**********************
+THIRD PARTY COMPONENTS
+**********************
+This software includes third party software subject to the following copyrights:
+
+AWS SDK under the Apache License Version 2.0
+Elasticsearch under Apache License Version 2.0
+http-aws-es under the Massachusetts Institute of Technology (MIT) license
+https under the Internet Systems Consortium (ISC) license
+url under the Massachusetts Institute of Technology (MIT) license
+moment under the Massachusetts Institute of Technology (MIT) license
+request under the Apache License Version 2.0
+uuid under the Massachusetts Institute of Technology (MIT) license
+aws-amplify under the Apache License Version 2.0
+aws-amplify-react under the Apache License Version 2.0
+bootstrap under the Massachusetts Institute of Technology (MIT) license
+react under the Massachusetts Institute of Technology (MIT) license
+react-bootstrap under the Massachusetts Institute of Technology (MIT) license
+react-dom under the Massachusetts Institute of Technology (MIT) license
+react-router-dom under the Massachusetts Institute of Technology (MIT) license
+react-scripts under the Massachusetts Institute of Technology (MIT) license
+reactstrap under the Massachusetts Institute of Technology (MIT) license
