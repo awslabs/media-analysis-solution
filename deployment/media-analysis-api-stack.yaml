@@ -38,7 +38,7 @@ Resources:
                 S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
                 S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "media-analysis-api.zip"]]
             Handler: index.handler
-            Runtime: nodejs8.10
+            Runtime: nodejs12.x
             Role: !GetAtt MediaAnalysisApiRole.Arn
             Timeout: 60
             MemorySize: 256
@@ -112,10 +112,55 @@ Resources:
                           - "logs:PutLogEvents"
                         Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
 
+    ApiLoggingRole:
+      Type: AWS::IAM::Role
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W11
+              reason: API Gateway requires these permissions for CloudWatch Logging (https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-logging.html#set-up-access-logging-permissions)
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Principal:
+                Service:
+                  - "apigateway.amazonaws.com"
+              Action:
+                - "sts:AssumeRole"
+        Path: /
+        Policies:
+          - PolicyName: media-analysis-api-logging-policy
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: "Allow"
+                  Action:
+                    - "logs:CreateLogGroup"
+                    - "logs:CreateLogStream"
+                    - "logs:DescribeLogGroups"
+                    - "logs:DescribeLogStreams"
+                    - "logs:PutLogEvents"
+                    - "logs:GetLogEvents"
+                    - "logs:FilterLogEvents"
+                  Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+
+    ApiAccountConfig:
+      Type: "AWS::ApiGateway::Account"
+      Properties:
+        CloudWatchRoleArn: !GetAtt ApiLoggingRole.Arn
+
+    ApiLogs:
+      Type: "AWS::Logs::LogGroup"
     DeployMediaAnalysisAPI:
       Type: "AWS::ApiGateway::Deployment"
       Properties:
         RestApiId: !Ref MediaAnalysisRestApi
+        StageDescription:
+          AccessLogSetting:
+            DestinationArn: !GetAtt ApiLogs.Arn
+            Format: $context.identity.sourceIp $context.identity.caller $context.identity.user [$context.requestTime] "$context.httpMethod $context.resourcePath $context.protocol" $context.status $context.responseLength $context.requestId
         StageName: prod
 
     MediaAnalysisLambdaExecRole:

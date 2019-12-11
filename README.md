@@ -5,7 +5,7 @@ AWS offers several managed AI services, such as Amazon Rekognition, Amazon Trans
 
 The Media Analysis Solution is a turnkey reference implementation that helps customers start analyzing their media files using serverless, managed AI services. The Media Analysis Solution uses highly available, highly scalable, and highly accurate AWS-native services to automatically extract valuable metadata from audio, image, and video files.
 
-For more information and a detailed deployment guide visit the Media Analysis Solution at https://aws.amazon.com/answers/media-entertainment/media-analysis-solution/.
+For more information and a detailed deployment guide visit the Media Analysis Solution at https://aws.amazon.com/solutions/media-analysis-solution/.
 
 ## Running unit tests for customization
 * Clone the repository, then make the desired code changes
@@ -16,22 +16,22 @@ chmod +x ./run-unit-tests.sh
 ./run-unit-tests.sh
 ```
 ## Building distributable for customization
-* Configure the bucket name of your target Amazon S3 distribution bucket
+* Create an Amazon S3 Bucket
 ```
-export DIST_OUTPUT_BUCKET=my-bucket-name # bucket where customized code will reside
-export VERSION=my-version # version number for the customized code
+aws s3 mb s3://my-bucket-us-east-1 --region us-east-1
 ```
-_Note:_ You would have to create an S3 bucket with the prefix 'my-bucket-name-<aws_region>'; aws_region is where you are testing the customized solution. Also, the assets in bucket should be publicly accessible.
 
-* Now build the distributable:
-```
+* Navigate to the deployment folder and build the distributable
+```bash
 chmod +x ./build-s3-dist.sh
-./build-s3-dist.sh $DIST_OUTPUT_BUCKET media-analysis-solution $VERSION
+./build-s3-dist.sh my-bucket media-analysis-solution my-version
 ```
 
-* Deploy the distributable to an Amazon S3 bucket in your account. _Note:_ you must have the AWS Command Line Interface installed.
-```
-aws s3 cp ./dist/ s3://my-bucket-name-<aws_region>/media-analysis-solution/<my-version>/ --recursive --acl bucket-owner-full-control --profile aws-cred-profile-name
+> Note: The build-s3-dist script expects the bucket name as one of its parameters, and this value should not include the region suffix.
+
+* Deploy the distributable to an Amazon S3 bucket in your account (you must have the AWS CLI installed)
+```bash
+aws s3 cp ./regional-s3-assets/ s3://my-bucket-us-east-1/media-analysis-solution/my-version --recursive --acl bucket-owner-full-control
 ```
 
 * Get the link of the media-analysis-deploy.template uploaded to your Amazon S3 bucket.

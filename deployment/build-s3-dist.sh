@@ -40,27 +40,29 @@ mkdir -p $build_dist_dir
 echo "------------------------------------------------------------------------------"
 echo "CloudFormation Templates"
 echo "------------------------------------------------------------------------------"
-cp $template_dir/*.template $template_dist_dir/
 cp $template_dir/*.yaml $template_dist_dir/
-
 cd $template_dist_dir
+
 # Rename all *.yaml to *.template
 for f in *.yaml; do
     mv -- "$f" "${f%.yaml}.template"
 done
 
-cd ..
-echo "Updating code source bucket in template with $1"
-replace="s/%%BUCKET_NAME%%/$1/g"
-echo "sed -i '' -e $replace $template_dist_dir/*.template"
-sed -i '' -e $replace $template_dist_dir/*.template
-replace="s/%%SOLUTION_NAME%%/$2/g"
-echo "sed -i '' -e $replace $template_dist_dir/*.template"
-sed -i '' -e $replace $template_dist_dir/*.template
-replace="s/%%VERSION%%/$3/g"
-echo "sed -i '' -e $replace $template_dist_dir/*.template"
-sed -i '' -e $replace $template_dist_dir/*.template
+for f in *.template; do
+    replace="s/%%BUCKET_NAME%%/$1/g"
+    echo "sed -i -e $replace $f"
+    sed -i -e $replace $f
 
+    replace="s/%%SOLUTION_NAME%%/$2/g"
+    echo "sed -i -e $replace $f"
+    sed -i -e $replace $f
+
+    replace="s/%%VERSION%%/$3/g"
+    echo "sed -i -e $replace $f"
+    sed -i -e $replace $f
+done
+
+cd ..
 cp $template_dist_dir/*.template $build_dist_dir/
 
 echo "------------------------------------------------------------------------------"

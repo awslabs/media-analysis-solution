@@ -5,16 +5,16 @@
     "name": "aws-solutions-builder"
   },
   "version": "0.0.1",
-  "private": "true",
+  "private": true,
   "dependencies": {
-    "aws-amplify": "0.3.2",
-    "aws-amplify-react": "0.1.41",
+    "aws-amplify": "1.2.4",
+    "aws-amplify-react": "2.5.4",
     "bootstrap": "4.3.1",
     "react": "16.2.0",
     "react-bootstrap": "0.32.1",
     "react-dom": "16.2.1",
     "react-router-dom": "4.2.2",
-    "react-scripts": "1.1.1",
+    "react-scripts": "3.2.0",
     "reactstrap": "6.0.1",
     "uuid": "3.2.1"
   },
@@ -23,5 +23,17 @@
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }

@@ -50,53 +50,75 @@ Mappings:
 
 Resources:
     MediaAnalysisBucket:
-        Type: AWS::S3::Bucket
-        DeletionPolicy: Retain
-        DependsOn: MediaAnalysisNewMediaPermission
-        Properties:
-            BucketName: !Sub 'media-analysis-${AWS::Region}-${AWS::AccountId}'
-            BucketEncryption:
-                ServerSideEncryptionConfiguration:
-                    -
-                      ServerSideEncryptionByDefault:
-                          SSEAlgorithm: AES256
-            CorsConfiguration:
-                CorsRules:
-                  -
-                    AllowedHeaders:
-                      - '*'
-                    AllowedMethods:
-                      - 'PUT'
-                      - 'GET'
-                      - 'POST'
-                    AllowedOrigins:
-                      - '*'
-                    ExposedHeaders:
-                      - 'ETAG'
-                    MaxAge: 3000
-            NotificationConfiguration:
-                LambdaConfigurations:
-                    - Event: "s3:ObjectCreated:*"
-                      Function: !GetAtt MediaAnalysisFunction.Arn
-                      Filter:
-                          S3Key:
-                              Rules:
-                                  - Name: prefix
-                                    Value: 'private/'
-            LoggingConfiguration:
-              DestinationBucketName: !Ref Logs
-              LogFilePrefix: media-analysis-logs
+      Type: AWS::S3::Bucket
+      DeletionPolicy: Retain
+      DependsOn: MediaAnalysisNewMediaPermission
+      Properties:
+        BucketName: !Sub 'media-analysis-${AWS::Region}-${AWS::AccountId}'
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            -
+              ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        CorsConfiguration:
+          CorsRules:
+            -
+              AllowedHeaders:
+                - '*'
+              AllowedMethods:
+                - 'PUT'
+                - 'GET'
+                - 'POST'
+              AllowedOrigins:
+                - '*'
+              ExposedHeaders:
+                - 'ETAG'
+              MaxAge: 3000
+        NotificationConfiguration:
+          LambdaConfigurations:
+            - Event: "s3:ObjectCreated:*"
+              Function: !GetAtt MediaAnalysisFunction.Arn
+              Filter:
+                S3Key:
+                  Rules:
+                    - Name: prefix
+                      Value: 'private/'
+        LoggingConfiguration:
+          DestinationBucketName: !Ref Logs
+          LogFilePrefix: media-analysis-logs
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W51
+              reason: Bucket does not need a policy
 
     MediaAnalysisWebsiteBucket:
-        Type: AWS::S3::Bucket
-        DeletionPolicy: Retain
-        Properties:
-            WebsiteConfiguration:
-                IndexDocument: "index.html"
-                ErrorDocument: "index.html"
-            LoggingConfiguration:
-              DestinationBucketName: !Ref Logs
-              LogFilePrefix: media-analysis-website-logs
+      Type: AWS::S3::Bucket
+      DeletionPolicy: Retain
+      Properties:
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        WebsiteConfiguration:
+          IndexDocument: "index.html"
+          ErrorDocument: "index.html"
+        LoggingConfiguration:
+          DestinationBucketName: !Ref Logs
+          LogFilePrefix: media-analysis-website-logs
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W41
+              reason: "Encryption not enabled, this bucket hosts a website accessed through CloudFront"
+            - id: W51
+              reason: "Bucket does not need a policy"
 
     MediaAnalysisOriginAccessIdentity:
       Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
@@ -132,8 +154,19 @@ Resources:
           rules_to_suppress:
             - id: W35
               reason: This S3 bucket is used as the logging destination for CloudFront and two other buckets created by this solution.
+            - id: W51
+              reason: Bucket does not need a policy
       Properties:
         AccessControl: LogDeliveryWrite
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
 
     MediaAnalysisWebsiteDistribution:
         Type: AWS::CloudFront::Distribution
@@ -161,23 +194,23 @@ Resources:
                         - HEAD
                         - OPTIONS
                     ForwardedValues:
-                        QueryString: 'false'
+                        QueryString: false
                     ViewerProtocolPolicy: redirect-to-https
                 DefaultRootObject: "index.html"
                 CustomErrorResponses:
-                  - ErrorCode: '404'
+                  - ErrorCode: 404
                     ResponsePagePath: "/index.html"
-                    ResponseCode: '200'
-                  - ErrorCode: '403'
+                    ResponseCode: 200
+                  - ErrorCode: 403
                     ResponsePagePath: "/index.html"
-                    ResponseCode: '200'
-                IPV6Enabled: 'true'
+                    ResponseCode: 200
+                IPV6Enabled: true
                 ViewerCertificate:
-                    CloudFrontDefaultCertificate: 'true'
-                Enabled: 'true'
+                    CloudFrontDefaultCertificate: true
+                Enabled: true
                 HttpVersion: 'http2'
                 Logging:
-                  IncludeCookies: 'false'
+                  IncludeCookies: false
                   Bucket: !GetAtt Logs.DomainName
                   Prefix: cloudfront-logs/
 
@@ -245,7 +278,7 @@ Resources:
                 S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
                 S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "media-analysis-helper.zip"]]
             Handler: index.handler
-            Runtime: nodejs8.10
+            Runtime: nodejs12.x
             Role: !GetAtt MediaAnalysisHelperRole.Arn
             Timeout: 300
             MemorySize: 256
@@ -272,7 +305,7 @@ Resources:
             customAction: "sendConfig"
             uuid: !GetAtt GenerateUuid.uuid
             solutionId: SO0042
-            version: 1
+            version: "%%VERSION%%"
             size: !Ref Size
             metrics: !FindInMap ["Send", "AnonymousUsage", "Data"]
 
@@ -372,7 +405,7 @@ Resources:
                 S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
                 S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "media-analysis-function.zip"]]
             Handler: index.handler
-            Runtime: nodejs8.10
+            Runtime: nodejs12.x
             Role: !GetAtt MediaAnalysisFunctionRole.Arn
             Timeout: 60
             MemorySize: 256
@@ -662,4 +695,4 @@ Outputs:
         Value: !Ref MediaAnalysisIdentityPool
     SolutionVersion:
       Description: Version Number
-      Value: %%VERSION%%
+      Value: "%%VERSION%%"

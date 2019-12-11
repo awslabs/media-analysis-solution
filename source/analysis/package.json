@@ -6,7 +6,7 @@
         "name": "aws-solutions-builder"
     },
     "version": "0.0.1",
-    "private": "true",
+    "private": true,
     "dependencies": {
         "uuid": "*",
         "request": "*",
