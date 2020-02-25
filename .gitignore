@@ -1,0 +1,20 @@
+# compiled output
+**/dist
+**/global-s3-assets
+**/regional-s3-assets
+**/open-source
+**/*.zip
+**/tmp
+**/test_files
+source/web_site/build/**/*
+
+# dependencies
+**/node_modules
+
+# misc
+**/npm-debug.log
+**/package-lock.json
+
+# System Files
+**/.DS_Store
+**/.vscode

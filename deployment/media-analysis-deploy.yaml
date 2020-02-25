@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: (SO0042) Media Analysis Solution - The Media Analysis Solution is a serverless solution that leverages managed AWS services to automatically analyze your audio, video, and image files in order to extract valuable metadata.
+Description: (SO0042) %%SOLUTION_NAME%% - The %%SOLUTION_NAME%% is a serverless solution that leverages managed AWS services to automatically analyze your audio, video, and image files in order to extract valuable metadata. Version %%VERSION%%
 
 Parameters:
     Email:
@@ -14,6 +14,12 @@ Parameters:
             - Small
             - Medium
             - Large
+    Version:
+        Type: String
+        Description: Amazon Elasticsearch cluster version
+        Default: '6.8'
+        AllowedValues:
+            - '6.8'
 
 Metadata:
     AWS::CloudFormation::Interface:
@@ -24,11 +30,14 @@ Metadata:
                 Parameters:
                     - Email
                     - Size
+                    - Version
         ParameterLabels:
             Email:
                 default: "Email address"
             Size:
                 default: "Amazon Elasticsearch cluster sizing"
+            Version:
+                default: "Amazon Elasticsearch cluster version"
 
 Mappings:
     Send:
@@ -37,51 +46,79 @@ Mappings:
     SourceCode:
         General:
             S3Bucket: "%%BUCKET_NAME%%"
-            KeyPrefix: "media-analysis-solution/%%VERSION%%"
+            KeyPrefix: "%%SOLUTION_NAME%%/%%VERSION%%"
 
 Resources:
     MediaAnalysisBucket:
-        Type: AWS::S3::Bucket
-        DeletionPolicy: Retain
-        DependsOn: MediaAnalysisNewMediaPermission
-        Properties:
-            BucketName: !Sub 'media-analysis-${AWS::Region}-${AWS::AccountId}'
-            BucketEncryption:
-                ServerSideEncryptionConfiguration:
-                    -
-                      ServerSideEncryptionByDefault:
-                          SSEAlgorithm: AES256
-            CorsConfiguration:
-                CorsRules:
-                  -
-                    AllowedHeaders:
-                      - '*'
-                    AllowedMethods:
-                      - 'PUT'
-                      - 'GET'
-                      - 'POST'
-                    AllowedOrigins:
-                      - '*'
-                    ExposedHeaders:
-                      - 'ETAG'
-                    MaxAge: 3000
-            NotificationConfiguration:
-                LambdaConfigurations:
-                    - Event: "s3:ObjectCreated:*"
-                      Function: !GetAtt MediaAnalysisFunction.Arn
-                      Filter:
-                          S3Key:
-                              Rules:
-                                  - Name: prefix
-                                    Value: 'private/'
+      Type: AWS::S3::Bucket
+      DeletionPolicy: Retain
+      DependsOn: MediaAnalysisNewMediaPermission
+      Properties:
+        BucketName: !Sub 'media-analysis-${AWS::Region}-${AWS::AccountId}'
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            -
+              ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        CorsConfiguration:
+          CorsRules:
+            -
+              AllowedHeaders:
+                - '*'
+              AllowedMethods:
+                - 'PUT'
+                - 'GET'
+                - 'POST'
+              AllowedOrigins:
+                - '*'
+              ExposedHeaders:
+                - 'ETAG'
+              MaxAge: 3000
+        NotificationConfiguration:
+          LambdaConfigurations:
+            - Event: "s3:ObjectCreated:*"
+              Function: !GetAtt MediaAnalysisFunction.Arn
+              Filter:
+                S3Key:
+                  Rules:
+                    - Name: prefix
+                      Value: 'private/'
+        LoggingConfiguration:
+          DestinationBucketName: !Ref Logs
+          LogFilePrefix: media-analysis-logs
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W51
+              reason: Bucket does not need a policy
 
     MediaAnalysisWebsiteBucket:
-        Type: AWS::S3::Bucket
-        DeletionPolicy: Retain
-        Properties:
-            WebsiteConfiguration:
-                IndexDocument: "index.html"
-                ErrorDocument: "index.html"
+      Type: AWS::S3::Bucket
+      DeletionPolicy: Retain
+      Properties:
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        WebsiteConfiguration:
+          IndexDocument: "index.html"
+          ErrorDocument: "index.html"
+        LoggingConfiguration:
+          DestinationBucketName: !Ref Logs
+          LogFilePrefix: media-analysis-website-logs
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W41
+              reason: "Encryption not enabled, this bucket hosts a website accessed through CloudFront"
+            - id: W51
+              reason: "Bucket does not need a policy"
 
     MediaAnalysisOriginAccessIdentity:
       Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
@@ -109,11 +146,33 @@ Resources:
                     Principal:
                       CanonicalUser: !GetAtt MediaAnalysisOriginAccessIdentity.S3CanonicalUserId
 
+    Logs:
+      DeletionPolicy: Retain
+      Type: AWS::S3::Bucket
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W35
+              reason: This S3 bucket is used as the logging destination for CloudFront and two other buckets created by this solution.
+            - id: W51
+              reason: Bucket does not need a policy
+      Properties:
+        AccessControl: LogDeliveryWrite
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+
     MediaAnalysisWebsiteDistribution:
         Type: AWS::CloudFront::Distribution
         Properties:
             DistributionConfig:
-                Comment: "Website distribution for Media Analysis solution"
+                Comment: "Website distribution for %%SOLUTION_NAME%%"
                 Origins:
                     -
                       Id: S3-solution-website
@@ -135,24 +194,33 @@ Resources:
                         - HEAD
                         - OPTIONS
                     ForwardedValues:
-                        QueryString: 'false'
+                        QueryString: false
                     ViewerProtocolPolicy: redirect-to-https
                 DefaultRootObject: "index.html"
                 CustomErrorResponses:
-                  - ErrorCode: '404'
+                  - ErrorCode: 404
                     ResponsePagePath: "/index.html"
-                    ResponseCode: '200'
-                  - ErrorCode: '403'
+                    ResponseCode: 200
+                  - ErrorCode: 403
                     ResponsePagePath: "/index.html"
-                    ResponseCode: '200'
-                IPV6Enabled: 'true'
+                    ResponseCode: 200
+                IPV6Enabled: true
                 ViewerCertificate:
-                    CloudFrontDefaultCertificate: 'true'
-                Enabled: 'true'
+                    CloudFrontDefaultCertificate: true
+                Enabled: true
                 HttpVersion: 'http2'
+                Logging:
+                  IncludeCookies: false
+                  Bucket: !GetAtt Logs.DomainName
+                  Prefix: cloudfront-logs/
 
     MediaAnalysisHelperRole:
         Type: AWS::IAM::Role
+        Metadata:
+          cfn_nag:
+            rules_to_suppress:
+              - id: W11
+                reason: Refer to inline comments for the wildcard justification.
         Properties:
             AssumeRolePolicyDocument:
               Version: "2012-10-17"
@@ -175,6 +243,10 @@ Resources:
                         Effect: "Allow"
                         Action:
                           - "es:ESHttpPut"
+                        # Wildcards on ElasticSearch domain resources are
+                        # present because documents are indexed based off of
+                        # the Step Function job ID, which is unique per
+                        # invocation.
                         Resource: !Join ["", ["arn:aws:es:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":domain/media-analysis/*"]]
                       -
                         Effect: "Allow"
@@ -182,27 +254,31 @@ Resources:
                           - "logs:CreateLogGroup"
                           - "logs:CreateLogStream"
                           - "logs:PutLogEvents"
-                        Resource: "*"
+                        # The resource is limited to lambda log group only.
+                        Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
                       -
                         Effect: "Allow"
                         Action:
                           - "s3:GetObject"
+                        # This is only a read-only access to S3 buckets. This roles is used to
+                        # download the solutions artifacts from the AWS Solutions bucket.
                         Resource: "arn:aws:s3:::*"
                       -
                         Effect: "Allow"
                         Action:
                           - "s3:PutObject"
+                        # This resource is limited to a bucket created by this solution.
                         Resource: !Join ["", ["arn:aws:s3:::", !Ref MediaAnalysisWebsiteBucket, "/*"]]
 
     MediaAnalysisHelperFunction:
         Type: AWS::Lambda::Function
         Properties:
-            Description: "AWS Lambda function to help the Media Analysis Solution template"
+            Description: "AWS Lambda function to help the %%SOLUTION_NAME%% template"
             Code:
                 S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
                 S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "media-analysis-helper.zip"]]
             Handler: index.handler
-            Runtime: nodejs8.10
+            Runtime: nodejs12.x
             Role: !GetAtt MediaAnalysisHelperRole.Arn
             Timeout: 300
             MemorySize: 256
@@ -214,6 +290,7 @@ Resources:
             customAction: "createIndex"
             clusterUrl: !GetAtt MediaAnalysisStorageStack.Outputs.EsCluster
             es_index: "media-analysis"
+            es_version: !Ref Version
 
     GenerateUuid:
         Type: Custom::CreateUuid
@@ -228,7 +305,7 @@ Resources:
             customAction: "sendConfig"
             uuid: !GetAtt GenerateUuid.uuid
             solutionId: SO0042
-            version: 1
+            version: "%%VERSION%%"
             size: !Ref Size
             metrics: !FindInMap ["Send", "AnonymousUsage", "Data"]
 
@@ -264,6 +341,7 @@ Resources:
             TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]] , !FindInMap ["SourceCode", "General", "KeyPrefix"], "media-analysis-storage-stack.template"]]
             Parameters:
                 Size: !Ref Size
+                Version: !Ref Version
                 DomainName: media-analysis
 
     MediaAnalysisStateMachineStack:
@@ -281,10 +359,16 @@ Resources:
             Parameters:
                 StateMachineArn: !Join ["", ["arn:aws:states:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":stateMachine:media-analysis-state-machine"]]
                 DomainEndpoint: !GetAtt MediaAnalysisStorageStack.Outputs.EsCluster
+                DomainVersion: !Ref Version
                 S3Bucket: !Join ["", ["media-analysis-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
 
     MediaConvertRole:
       Type: AWS::IAM::Role
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W11
+              reason: The S3 bucket in the resource is limited to a bucket created by this solution.
       Properties:
         AssumeRolePolicyDocument:
           Version: "2012-10-17"
@@ -301,7 +385,6 @@ Resources:
             PolicyDocument:
               Version: "2012-10-17"
               Statement:
-
                 # Read input object
                 - Effect: "Allow"
                   Action:
@@ -322,7 +405,7 @@ Resources:
                 S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], !Ref "AWS::Region"]]
                 S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "media-analysis-function.zip"]]
             Handler: index.handler
-            Runtime: nodejs8.10
+            Runtime: nodejs12.x
             Role: !GetAtt MediaAnalysisFunctionRole.Arn
             Timeout: 60
             MemorySize: 256
@@ -331,6 +414,7 @@ Resources:
                     CONFIDENCE_SCORE: '0'
                     DOMAIN_ENDPOINT: !GetAtt MediaAnalysisStorageStack.Outputs.EsCluster
                     ES_INDEX: media-analysis
+                    ES_VERSION: !Ref Version
                     S3_BUCKET: !Join ["", ["media-analysis-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
                     STATE_MACHINE: !Join ["", ["arn:aws:states:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":stateMachine:media-analysis-state-machine"]]
                     UUID: !GetAtt GenerateUuid.uuid
@@ -472,8 +556,12 @@ Resources:
 
     MediaAnalysisCongitoAuthenticatedRole:
       Type: "AWS::IAM::Role"
+      Metadata:
+        cfn_nag:
+          rules_to_suppress:
+            - id: W11
+              reason: The resources in the policy are created/managed by this solution.
       Properties:
-          RoleName: !Join ["-", ["media-analysis-auth-role", !Ref "AWS::Region" ]]
           AssumeRolePolicyDocument:
               Version: "2012-10-17"
               Statement:
@@ -560,17 +648,17 @@ Resources:
             AdminCreateUserConfig:
                 AllowAdminCreateUserOnly: true
                 InviteMessageTemplate:
-                  EmailSubject: "Your Media Analysis Solution demo login"
+                  EmailSubject: "Your %%SOLUTION_NAME%% demo login"
                   EmailMessage:
                     !Sub |
-                        <p>You are invited to join the Media Analysis Solution demo page. Youre credentials are:</p>
+                        <p>You are invited to join the %%SOLUTION_NAME%% demo page. Your credentials are:</p>
                         <p>
                         Username: <strong>{username}</strong><br />
                         Password: <strong>{####}</strong>
                         </p>
                         <p>
                         Please sign in with the user name and your temporary password provided above at: <br />
-                        !Sub https://${MediaAnalysisWebsiteDistribution.DomainName}
+                        https://${MediaAnalysisWebsiteDistribution.DomainName}
                         </p>
             AliasAttributes:
                 - email
@@ -605,3 +693,6 @@ Outputs:
     MediaAnalysisIdentityPool:
         Description: "Media Analysis Identity Pool"
         Value: !Ref MediaAnalysisIdentityPool
+    SolutionVersion:
+      Description: Version Number
+      Value: "%%VERSION%%"

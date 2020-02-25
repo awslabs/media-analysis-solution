@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: (SO0042-storage) Media Analysis Solution - The AWS CloudFormation template that provisions the Media Analysis Solution storage and search resources using Amazon Elasticsearch.
+Description: (SO0042-storage) %%SOLUTION_NAME%% - The AWS CloudFormation template that provisions the %%SOLUTION_NAME%% storage and search resources using Amazon Elasticsearch. Version %%VERSION%%
 
 Parameters:
     Size:
@@ -8,6 +8,9 @@ Parameters:
     DomainName:
         Type: String
         Description: Name of the Amazon Elasitcsearch cluster
+    Version:
+        Type: String
+        Description: Amazon Elasticsearch cluster version
 
 Mappings:
     RegionMap:
@@ -39,6 +42,11 @@ Mappings:
 Resources:
     MediaAnalysisElasticSearch:
         Type: AWS::Elasticsearch::Domain
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W28
+                      reason: Removing the explicit name for this resource creates a new ES domain during update process.
         Properties:
             DomainName: !Ref DomainName
             ElasticsearchClusterConfig:
@@ -48,7 +56,7 @@ Resources:
                 InstanceCount: !FindInMap ["SizeMap", !Ref Size, "InstanceCount"]
                 ZoneAwarenessEnabled: true
                 InstanceType: !FindInMap ["RegionMap", Ref: "AWS::Region", "InstanceType"]
-            ElasticsearchVersion: 6.0
+            ElasticsearchVersion: !Ref Version
             EBSOptions:
                 EBSEnabled: true
                 Iops: 0

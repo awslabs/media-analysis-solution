@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: (SO0042-statemachine) Media Analysis Solution - The AWS CloudFormation template that provisions the Media Analysis Solution state machine using Amazon Step Functions.
+Description: (SO0042-statemachine) %%SOLUTION_NAME%% - The AWS CloudFormation template that provisions the %%SOLUTION_NAME%% state machine using Amazon Step Functions. Version %%VERSION%%
 
 Parameters:
   MediaAnalysisFunction:
