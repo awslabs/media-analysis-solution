@@ -79,7 +79,7 @@ for (let i = 0; i < _filelist.length; i++) {
     _manifest.files.push(_filelist[i].replace(`${args.target}/`, ''));
 }
 
-fs.writeFile(args.output, JSON.stringify(_manifest, null, 4), function(err, result) {
+fs.writeFileSync(args.output, JSON.stringify(_manifest, null, 4), function(err, result) {
     if (err) {
         console.error(err);
     }
